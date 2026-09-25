@@ -1,43 +1,36 @@
 # NORMA
 
-Compilador de producción para animación. No guarda dibujos. Guarda la semilla, los metros y las firmas. El plano se calcula.
+Escritorio de diseño para animación. No es un chat que pinta el corto de nuevo cada vez. Es un panel: archivo, mesa y director.
 
-La idea viene del mismo truco que hacía livianos a los simuladores de exploración espacial: el mundo no es un archivo de escenarios, es una función. Acercar el zoom no estira un bitmap. Vuelve a evaluar el ruido, con más octavas, y el archivo pesa lo mismo.
+Lo primero es el personaje. Subes un boceto o pides que se mejore una lámina ya puesta. Frente, perfil, tres cuartos, espalda y expresión viven como tomas de la misma ficha. La hoja de modelo y la guía de cabezas no generan nada.
 
-## Qué problema cierra
+El fondo se ve. Si quieres otro lugar, creas un fondo y subes esa escena. En el plano, el papel de la lámina se recorta en el navegador y el personaje se arrastra, escala y voltea encima. Eso cuesta 0. Exportar el PNG también.
 
-Pedirle a un modelo “haz el corto” se nota de lejos porque cada toma reinventa la cara, la luz y la escala. NORMA parte el trabajo en pasos que se firman:
+El director es DeepSeek. Mira la lámina abierta y llama herramientas: ficha, paleta, componer la escena, o como máximo una lámina nueva. Sin clave, el panel obedece órdenes cortas.
 
-1. Biblia. Puerta en centímetros, lente, sensor, pigmentos, lista de nunca.
-2. Personaje. Estatura, cabezas, hombros. Frente y perfil salen de los mismos números.
-3. Locación. Una semilla. El mapa o la planta se derivan. Si una sala no admite la puerta de la biblia, no se firma.
-4. Plano. `h' = f · H / d`. Si el cuerpo no cabe, o se pierde, el corte falla.
-5. Memoria. Aceptar o rechazar un número queda guardado. La siguiente propuesta se aleja de lo rechazado.
+## En tu máquina
 
-El modelo, si se consulta, solo puede devolver números dentro de un rango. No puede cambiar la estatura ni la semilla. Si se sale, la respuesta se rechaza y entra en la memoria. La propuesta matemática no gasta nada.
-
-## La cuenta
-
-```
-peso     = bytes(semilla + proporciones + firmas + rechazos)
-no peso  = planos × 24 fps × 4 s × 1920 × 1080 × 4
-ahorro   = 1 − peso / no peso
-crédito  = 0 mientras no se imprima una lámina ni se consulte el modelo
+```bash
+npm install
+cp .env.example .env
 ```
 
-Un crédito de verdad aparece solo en dos sitios: imprimir la lámina (ahí nacen píxeles, una vez) y pedirle números al modelo (tope de 8 consultas por archivo).
+En `.env`:
 
-## Carpetas
+- `DEEPSEEK_API_KEY` para el director.
+- `XAI_API_KEY` solo si vas a pedir una lámina nueva. También puedes pegarla en Ajustes. No la subas al repositorio.
 
-El archivo es un árbol de verdad: carpetas, subcarpetas, personajes, locaciones, secuencias, planos. Un plano suelto no existe sin saber de quién es y dónde está. Borrar un nodo no borra la biblia.
+```bash
+npm run dev
+```
 
-## Qué se reutiliza
+Abre `http://localhost:8080`.
 
-- Ruido de valor y fBm, el mismo family de funciones de un mundo semilla.
-- Proporción clásica de animación, pero como números editables, no como un prompt.
-- Óptica de una cámara real: distancia focal, alto del sensor, fracción del cuadro.
-- Invalidación por huella, como un compilador: si cambias la estatura, el plano que la usaba queda sucio. Lo demás no se toca.
+## Qué hay abierto
 
-## Qué no es
+El corto de muestra es **La sal de Punta Palma**.
 
-No es un generador de video de punta a punta. Eso es lo caro y lo que se ve falso. El video, si algún día entra, entra solo en un plano ya firmado.
+- **Lina Vives**: frente y perfil. Hoja, guía, paleta, fijar, poner en la escena.
+- **Estero norte**: el fondo, visible.
+- **PL 010**: Lina recortada sobre el estero. Arrastra hasta la raya del suelo.
+- **Director**: a la derecha. Pega la clave de DeepSeek en Ajustes.

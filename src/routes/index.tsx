@@ -1,4 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Studio } from "@/components/norma/Studio";
+import { Desk } from "@/components/desk/Desk";
 
-export const Route = createFileRoute("/")({ component: Studio });
+export const Route = createFileRoute("/")({ component: Desk });
