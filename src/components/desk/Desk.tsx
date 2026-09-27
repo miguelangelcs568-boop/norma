@@ -5,7 +5,7 @@ import { Director } from "@/components/desk/director";
 import { SettingsPanel } from "@/components/desk/SettingsPanel";
 import { Stage } from "@/components/desk/stage";
 import { Tree } from "@/components/desk/tree";
-import { loadKeys, saveKeys } from "@/lib/desk/keys";
+import { loadKeys, saveKeys, type DeskKeys } from "@/lib/desk/keys";
 import { applyTheme, loadPrefs, savePrefs, type Theme } from "@/lib/desk/prefs";
 import { selectedAsset, useDesk } from "@/lib/desk/store";
 
@@ -15,7 +15,7 @@ export function Desk() {
   const lastBrief = useDesk((s) => s.lastBrief);
   const asset = selectedAsset(project);
   const [settings, setSettings] = useState(false);
-  const [keys, setKeys] = useState({ deepseek: "", image: "" });
+  const [keys, setKeys] = useState<DeskKeys>({ deepseek: "", image: "", brush: "off" });
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
