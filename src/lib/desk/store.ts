@@ -104,6 +104,7 @@ type State = {
   removeLayer: (sceneId: string, layerId: string) => void;
   setBackgroundId: (sceneId: string, backgroundId: string) => void;
   pushTrace: (trace: Omit<Trace, "id">) => void;
+  loadProject: (project: DeskProject) => void;
   resetDemo: () => void;
 };
 
@@ -205,6 +206,7 @@ export const useDesk = create<State>()(
             trace: [...get().project.trace, { ...trace, id: nid() }].slice(-40),
           },
         }),
+      loadProject: (project) => set({ project, pane: "mesa", lastBrief: null }),
       resetDemo: () => set({ project: seedProject(), pane: "mesa", lastBrief: null }),
     }),
     {
