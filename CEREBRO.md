@@ -2,6 +2,7 @@
 
 Fuente de verdad para cualquier agente (Grok u otro) que abra este repo.
 Antes de editar código: lee este archivo y `docs/ESTADO.md`. Si cambias arquitectura, el corto o el flujo de Windows, actualiza ambos en el mismo commit.
+Oficio del estudio y de cada motor: ver también el mapa en el proyecto Grok (`ESTUDIO-Y-MOTORES.md`).
 
 ## Qué es
 
@@ -9,7 +10,7 @@ NORMA no es un chat que pinta el corto de nuevo. Es un escritorio de producción
 
 1. **Archivo** — lista de activos.
 2. **Mesa** — ficha, láminas, composición.
-3. **Director** — DeepSeek obedece, mira lo abierto y llama herramientas.
+3. **Orden** — interpreta la frase de Miguel a brief de estudio; DeepSeek obedece ese brief.
 
 Se guardan semilla, escala y decisiones. Los píxeles se derivan. Una lámina ya hecha se reutiliza; no se regenera la película.
 
@@ -37,19 +38,21 @@ No borrar `public/__grok/`, `server/`, `scripts/grok-pwa-*`, `startup.sh`.
 | Qué | Dónde |
 |---|---|
 | UI del escritorio | `src/components/desk/Desk.tsx` |
-| Director (panel) | `src/components/desk/director.tsx` |
+| Orden (panel) | `src/components/desk/director.tsx` |
 | Mesa / escena / árbol | `stage.tsx`, `scene.tsx`, `tree.tsx`, `tools.tsx` |
+| Intérprete de frases | `src/lib/desk/brief.ts` |
 | Estado y semilla | `src/lib/desk/store.ts` |
 | Director DeepSeek + tools | `src/lib/desk/deepseek.functions.ts` |
-| Motor de lámina xAI | `src/lib/desk/image.functions.ts` |
+| Motor de lámina | `src/lib/desk/image.functions.ts` |
 | Recorte / paleta / PNG | `src/lib/desk/images.ts` |
 | Preferencias UI | `src/lib/desk/prefs.ts` |
 
 ## IAs del producto
 
-1. **Director — DeepSeek `deepseek-flash`**. Obey. Tools: `ficha`, `generar_lamina`, `componer_escena`, `paleta`. Un escenario nuevo = ficha + `generar_lamina` view `fondo` sin personas.
-2. **Pincel — xAI `grok-imagine-image`**. Generate o edit. Una lámina por pedido.
-3. **Este archivo** — memoria del programador. No llama APIs.
+1. **Intérprete** — código local. Convierte «alto con traje» en ficha + brief. No llama APIs.
+2. **Director — DeepSeek `deepseek-flash`**. Obey el brief ya cerrado. Tools: `ficha`, `generar_lamina`, `componer_escena`, `paleta`.
+3. **Pincel — xAI `grok-imagine-image` o ensayo Pollinations**. Una lámina por pedido, solo si falta maestro.
+4. **Este archivo** — memoria del programador.
 
 Nunca subas `.env`. Nunca regeneres Lina o el estero «sólo para probar».
 
@@ -63,7 +66,7 @@ Faltan: tres cuartos, espalda, expresión, más planos, más fondos, línea de t
 
 ## Reglas al cambiar código
 
-1. Un cambio = una superficie.
+1. Un cambio = una superficie, salvo que Miguel pida varias.
 2. Recortar / mover / exportar cuestan 0.
 3. Habla con Miguel en español, producto primero.
 4. Al terminar, actualiza `docs/ESTADO.md`.
