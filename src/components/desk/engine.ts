@@ -5,10 +5,20 @@ import { dataUrlToBlob, extractPalette, shrinkSrc } from "@/lib/desk/images";
 import { activeSrc, nid, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type ViewName } from "@/lib/desk/types";
 
+const SHORT = ["fondo", "perfil", "frente", "espalda", "expresion", "expresión", "paleta", "escena", "tres cuartos"];
+
+export function isShortOrder(brief: string) {
+  const text = brief.trim().toLowerCase();
+  return SHORT.some((word) => text === word || text.startsWith(`${word} `));
+}
+
 export async function runLocal(brief: string, asset: Asset | undefined, imageKey: string) {
   const pushTrace = useDesk.getState().pushTrace;
   const text = brief.toLowerCase();
-  if (!asset) return;
+  if (!asset) {
+    pushTrace({ role: "director", text: "Abre un personaje o un fondo en el archivo." });
+    return;
+  }
   if (text.includes("paleta")) {
     const src = activeSrc(asset);
     if (!src) return;
@@ -41,10 +51,11 @@ export async function runLocal(brief: string, asset: Asset | undefined, imageKey
   if (!view) {
     pushTrace({
       role: "director",
-      text: "Sin clave de DeepSeek solo obedezco órdenes cortas: perfil, expresión, frente, fondo, paleta, escena. Pégala en Ajustes para hablar.",
+      text: "Órdenes cortas: perfil, expresión, frente, fondo, paleta, escena.",
     });
     return;
   }
+  pushTrace({ role: "director", text: `Pidiendo lámina: ${VIEW_LABEL[view]}. Espera."` });
   await mintPlate(asset, view, imageKey);
 }
 

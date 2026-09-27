@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/desk/controls";
-import { runCall, runLocal } from "@/components/desk/engine";
+import { isShortOrder, runCall, runLocal } from "@/components/desk/engine";
 import { useResolvedSrc } from "@/components/desk/media";
 import { dirigir } from "@/lib/desk/deepseek.functions";
 import { shrinkSrc } from "@/lib/desk/images";
@@ -27,7 +27,7 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
     setBusy(true);
     pushTrace({ role: "user", text: brief });
     try {
-      if (!keys.deepseek) {
+      if (!keys.deepseek || isShortOrder(brief)) {
         await runLocal(brief, asset, keys.image);
         return;
       }
@@ -52,8 +52,12 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
       for (const call of result.calls) {
         await runCall(call.name, call.args, asset, keys.image);
       }
+      if (result.calls.length === 0 && isShortOrder(brief)) {
+        await runLocal(brief, asset, keys.image);
+        return;
+      }
       if (!result.text && result.calls.length === 0) {
-        pushTrace({ role: "director", text: "No llamé ninguna herramienta." });
+        pushTrace({ role: "director", text: "No supe qué herramienta usar. Prueba: fondo, perfil, frente." });
       }
     } catch (err) {
       pushTrace({ role: "director", text: err instanceof Error ? err.message : "El director se cortó." });
@@ -66,10 +70,10 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
     <aside className="flex h-full min-h-0 flex-col border-line bg-sheet/40 md:border-l">
       <header className="border-b border-line px-4 py-3">
         <p className="text-[11px] font-medium tracking-[0.14em] text-muted uppercase">
-          {keys.deepseek ? "Director · obedece" : "Director · sin clave"}
+          {keys.deepseek ? "Director · obedece" : "Director · órdenes cortas"}
         </p>
         <p className="mt-1 text-[12px] leading-snug text-muted">
-          DeepSeek escribe el lugar. Grok pinta la lámina. Tú apruebas.
+          Tú pides. El director encarga. El pincel pinta. Tú apruebas.
         </p>
       </header>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
@@ -96,7 +100,7 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder={keys.deepseek ? "Ej: muelle de noche, sin gente" : "perfil, expresión, paleta, escena"}
+          placeholder="fondo · perfil · frente · o una frase"
           className="h-10 min-w-0 flex-1 rounded-full border border-line bg-sheet px-3.5 text-[13px] text-ink outline-none focus:border-accent"
         />
         <Button tone="ink" type="submit" disabled={busy} aria-label="Enviar">
