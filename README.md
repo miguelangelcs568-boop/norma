@@ -12,37 +12,35 @@ El director es DeepSeek. Mira la lámina abierta y llama herramientas: ficha, pa
 
 Usa **Símbolo del sistema** (`cmd`), no PowerShell, si Windows te bloquea `npm`.
 
+La primera vez:
+
 ```bat
 cd %USERPROFILE%\norma
 npm install
 copy .env.example .env
-npm run dev
+```
+
+Cada vez que ensayas, un solo arranque:
+
+```bat
+vivo.bat
 ```
 
 Abre `http://localhost:8080`.
+
+`vivo.bat` deja dos ventanas:
+
+- el escritorio (`npm run dev`)
+- el espejo de GitHub (cada 5 segundos iguala tu carpeta a `main`)
+
+Cuando yo subo un cambio, esa carpeta se actualiza sola y Vite recarga la página. Si no recarga, F5. No edites los archivos del repo en el PC: el espejo los pisa. Lo que hagas en el navegador (Lina, el plano, las claves en Ajustes) se queda, vive en el navegador.
 
 En `.env`:
 
 - `DEEPSEEK_API_KEY` para el director.
 - `XAI_API_KEY` solo si vas a pedir una lámina nueva. También puedes pegarla en Ajustes. No la subas al repositorio.
 
-## Que los cambios del repo aparezcan solos
-
-Yo no puedo escribir en tu PC. El puente es GitHub. Deja **dos** ventanas de `cmd` abiertas dentro de la carpeta `norma`:
-
-Ventana 1 — el escritorio:
-
-```bat
-npm run dev
-```
-
-Ventana 2 — baja lo que yo suba, cada 20 segundos:
-
-```bat
-scripts\seguir-github.bat
-```
-
-No las cierres. Recarga el navegador si un cambio no se ve solo. Si un día cambio librerías (`package.json`), en la ventana 1 para con Ctrl+C, corre `npm install` y otra vez `npm run dev`.
+Si un día cambio librerías, la ventana del espejo lo dice. Entonces: Ctrl+C en el escritorio, `npm install`, otra vez `vivo.bat`.
 
 ## Qué hay abierto
 

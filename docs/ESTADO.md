@@ -5,9 +5,10 @@ Snapshot vivo. Actualízalo en el mismo commit que cambia producto, arquitectura
 ## Ahora (2026-09-27)
 
 - Repo: `miguelangelcs568-boop/norma`, rama `main`.
-- Última línea de trabajo antes del cerebro: arranque de Vite en Windows sin depender del PATH (`package.json` → `node ./node_modules/vite/bin/vite.js dev --host 127.0.0.1 --port 8080`).
-- Script de seguimiento: `scripts/seguir-github.bat` (pull cada 20 s).
-- Cerebro instalado: `CEREBRO.md` + este archivo + `AGENTS.project.md`.
+- Ensayo en vivo: `vivo.bat` abre el escritorio y una segunda ventana que iguala la carpeta a `origin/main` cada 5 s (`git fetch` + `git reset --hard`). Vite mira el disco con polling.
+- `.env` no se pisa (no está en git). Lo que se dibuja en el navegador vive en `localStorage` (`norma-desk-v5`) y tampoco se pisa.
+- Si editas un archivo del repo a mano en el PC, el espejo lo pisa. El código se cambia en GitHub, no en la carpeta local.
+- Cerebro: `CEREBRO.md` + este archivo + `AGENTS.project.md`.
 
 ## Qué funciona
 
@@ -17,6 +18,7 @@ Snapshot vivo. Actualízalo en el mismo commit que cambia producto, arquitectura
 - Director DeepSeek con tools `ficha`, `generar_lamina`, `componer_escena`, `paleta`.
 - Motor de lámina xAI `grok-imagine-image` (generate o edit).
 - Persistencia local `norma-desk-v5`.
+- Puente GitHub → localhost para ensayar lo que Grok sube.
 
 ## Qué no está
 
@@ -28,18 +30,23 @@ Snapshot vivo. Actualízalo en el mismo commit que cambia producto, arquitectura
 
 ## Cómo corre en la máquina de Miguel
 
+Una vez:
+
 ```bat
 cd %USERPROFILE%\norma
 npm install
 copy .env.example .env
-npm run dev
 ```
 
-Segunda ventana, no cerrar:
+Cada sesión, un doble clic o:
 
 ```bat
-scripts\seguir-github.bat
+vivo.bat
 ```
+
+Abre `http://localhost:8080` y ensaya. No cierres las dos ventanas negras.
+
+Si la ventana del espejo dice que cambiaron librerías: Ctrl+C en el escritorio, `npm install`, otra vez `vivo.bat`.
 
 Claves en `.env` o en Ajustes: `DEEPSEEK_API_KEY`, `XAI_API_KEY`.
 

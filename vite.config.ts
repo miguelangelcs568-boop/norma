@@ -150,6 +150,11 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    // Windows + git reset no siempre dispara el watcher nativo.
+    watch: {
+      usePolling: true,
+      interval: 400,
+    },
   },
   preview: {
     host: "127.0.0.1",
