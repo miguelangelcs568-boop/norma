@@ -33,7 +33,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-sheet/50 px-4 py-2">
         <input
           value={asset.name}
@@ -83,7 +83,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
                 <ModelSheet asset={asset} />
               ) : url ? (
                 <div className="relative inline-block">
-                  <img src={url} alt={asset.name} className="max-h-80 w-auto object-contain" />
+                  <img src={url} alt={asset.name} className="max-h-[min(20rem,42vh)] w-auto object-contain" />
                   {guide && asset.kind === "personaje" && <HeadGuide />}
                 </div>
               ) : (
@@ -109,7 +109,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
           />
         </>
       )}
-      {error && <p className="px-4 py-2 text-[12px] text-accent">{error}</p>}
+      {error && <p className="shrink-0 px-4 py-2 text-[12px] text-accent">{error}</p>}
     </div>
   );
 }
@@ -149,7 +149,7 @@ function SheetTake({ take }: { take: Take }) {
   const url = useResolvedSrc(take.src);
   return (
     <figure className="w-36 shrink-0">
-      {url ? <img src={url} alt={take.label} className="h-72 w-full object-contain object-bottom" /> : null}
+      {url ? <img src={url} alt={take.label} className="h-56 w-full object-contain object-bottom" /> : null}
       <figcaption className="mt-1 text-center text-[12px] text-muted">{take.label}</figcaption>
     </figure>
   );
