@@ -2,9 +2,13 @@
 chcp 65001 >nul
 cd /d "%~dp0\.."
 
+set "CACHE=%TEMP%\norma-espejo"
+if not exist "%CACHE%" mkdir "%CACHE%"
+
 echo.
 echo  NORMA - espejo de GitHub
-echo  Cada 5 segundos esta carpeta queda igual a GitHub.
+echo  Pregunta a GitHub cada 8 segundos.
+echo  Solo si hay codigo nuevo actualiza la carpeta.
 echo  No cierres esta ventana.
 echo  Navegador: http://localhost:8080
 echo.
@@ -17,22 +21,22 @@ if errorlevel 1 (
 )
 
 :loop
-git rev-parse --short HEAD > scripts\_head.txt 2>nul
-git fetch origin main >nul 2>scripts\_fetch.err
+git rev-parse --short HEAD > "%CACHE%\head.txt" 2>nul
+git fetch origin main >nul 2>"%CACHE%\fetch.err"
 if errorlevel 1 (
   echo No pude hablar con GitHub.
-  type scripts\_fetch.err
+  type "%CACHE%\fetch.err"
   goto wait
 )
 
-git rev-parse --short origin/main > scripts\_remote.txt 2>nul
-fc /b scripts\_head.txt scripts\_remote.txt >nul 2>&1
+git rev-parse --short origin/main > "%CACHE%\remote.txt" 2>nul
+fc /b "%CACHE%\head.txt" "%CACHE%\remote.txt" >nul 2>&1
 if errorlevel 1 (
-  echo Llego un cambio. Actualizando...
-  git hash-object package.json > scripts\_pkg1.txt 2>nul
+  echo Llego un cambio mio. Actualizando el codigo...
+  git hash-object package.json > "%CACHE%\pkg1.txt" 2>nul
   git reset --hard origin/main
-  git hash-object package.json > scripts\_pkg2.txt 2>nul
-  fc /b scripts\_pkg1.txt scripts\_pkg2.txt >nul 2>&1
+  git hash-object package.json > "%CACHE%\pkg2.txt" 2>nul
+  fc /b "%CACHE%\pkg1.txt" "%CACHE%\pkg2.txt" >nul 2>&1
   if errorlevel 1 (
     echo.
     echo  CAMBIARON LIBRERIAS.
@@ -44,9 +48,9 @@ if errorlevel 1 (
     echo  Listo. Si la pagina no cambia, pulsa F5.
   )
 ) else (
-  echo Al dia.
+  echo Al dia. Sin cambios nuevos.
 )
 
 :wait
-timeout /t 5 /nobreak >nul
+timeout /t 8 /nobreak >nul
 goto loop
