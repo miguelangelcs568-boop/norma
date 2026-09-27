@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { Brief } from "./brief";
 import type { Asset, DeskProject, SceneLayer, Spec, Take, Trace, ViewName } from "./types";
 
 const emptySpec = (): Spec => ({
@@ -78,7 +79,7 @@ export function seedProject(): DeskProject {
       {
         id: "t0",
         role: "director",
-        text: "Lina ya tiene frente y perfil. El estero es un fondo de verdad. En la escena el papel se recorta aquí, sin pedir otra imagen. Sube un boceto o pide una vista que falte.",
+        text: "Dime una frase. «perfil» reusa a Lina. «quiero un personaje alto con traje» abre ficha nueva y pide el frente. No pintamos el capítulo.",
       },
     ],
   };
@@ -87,7 +88,9 @@ export function seedProject(): DeskProject {
 type State = {
   project: DeskProject;
   pane: "archivo" | "mesa" | "director";
+  lastBrief: Brief | null;
   setPane: (pane: State["pane"]) => void;
+  setLastBrief: (brief: Brief | null) => void;
   select: (id: string) => void;
   patchSpec: (id: string, patch: Partial<Spec>) => void;
   setActiveTake: (assetId: string, takeId: string) => void;
@@ -117,7 +120,9 @@ export const useDesk = create<State>()(
     (set, get) => ({
       project: seedProject(),
       pane: "mesa",
+      lastBrief: null,
       setPane: (pane) => set({ pane }),
+      setLastBrief: (lastBrief) => set({ lastBrief }),
       select: (id) => set({ project: { ...get().project, selectedId: id }, pane: "mesa" }),
       patchSpec: (id, patch) =>
         set({
@@ -200,7 +205,7 @@ export const useDesk = create<State>()(
             trace: [...get().project.trace, { ...trace, id: nid() }].slice(-40),
           },
         }),
-      resetDemo: () => set({ project: seedProject(), pane: "mesa" }),
+      resetDemo: () => set({ project: seedProject(), pane: "mesa", lastBrief: null }),
     }),
     {
       name: "norma-desk-v5",
