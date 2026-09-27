@@ -2,7 +2,7 @@
 
 Escritorio de diseño para animación. No es un chat que pinta el corto de nuevo cada vez. Es un panel: archivo, mesa y director.
 
-Lo primero es el personaje. Subes un boceto o pides que se mejore una lámina ya puesta. Frente, perfil, tres cuartos, espalda y expresión viven como tomas de la misma ficha. La hoja de modelo y la guía de cabezas no generan nada.
+Lo primero es el personaje. Subes un boceto o pides que se mejore una lámina ya puesta. Frente, perfil, tres cuartos, espalda y expresión viven como tomas de la misma ficha. La hoja de modelo y la gía de cabezas no generan nada.
 
 El fondo se ve. Si quieres otro lugar, creas un fondo y subes esa escena. En el plano, el papel de la lámina se recorta en el navegador y el personaje se arrastra, escala y voltea encima. Eso cuesta 0. Exportar el PNG también.
 
@@ -48,7 +48,15 @@ No las cierres. Recarga el navegador si un cambio no se ve solo. Si un día camb
 
 El corto de muestra es **La sal de Punta Palma**.
 
-- **Lina Vives**: frente y perfil. Hoja, guía, paleta, fijar, poner en la escena.
+- **Lina Vives**: frente y perfil. Hoja, gía, paleta, fijar, poner en la escena.
 - **Estero norte**: el fondo, visible.
 - **PL 010**: Lina recortada sobre el estero. Arrastra hasta la raya del suelo.
 - **Director**: a la derecha. Pega la clave de DeepSeek en Ajustes.
+
+## Cerebro del proyecto
+
+Para no perder el hilo entre conversaciones o agentes:
+
+- `CEREBRO.md` — mapa, reglas, dónde está cada cosa.
+- `docs/ESTADO.md` — qué funciona hoy y qué falta.
+- `AGENTS.project.md` — protocolo obligatorio antes de tocar código.
