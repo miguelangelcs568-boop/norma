@@ -5,6 +5,8 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "NORMA";
 
+const THEME_BOOT = `(function(){try{var t=JSON.parse(localStorage.getItem("norma-desk-prefs")||"{}").theme;if(t==="dark"||t==="light"){document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t;}}catch(e){}})();`;
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -16,7 +18,7 @@ export const Route = createRootRoute({
         content:
           "Compilador de producción para animación. Semilla, escala real y firmas. Los píxeles se derivan.",
       },
-      { name: "theme-color", content: "#ebe4d6" },
+      { name: "theme-color", content: "#f5f5f7" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -25,13 +27,14 @@ export const Route = createRootRoute({
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap",
       },
     ],
   }),
   component: () => (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <HeadContent />
       </head>
       <body>

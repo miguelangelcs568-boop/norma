@@ -3,9 +3,9 @@ import type { ButtonHTMLAttributes } from "react";
 type Tone = "ink" | "ghost" | "accent";
 
 const TONE: Record<Tone, string> = {
-  ink: "bg-ink text-sheet",
-  ghost: "border border-line bg-sheet text-ink",
-  accent: "bg-accent text-on-accent",
+  ink: "bg-ink text-sheet shadow-sm",
+  ghost: "border border-line bg-sheet text-ink shadow-sm",
+  accent: "bg-accent text-on-accent shadow-sm",
 };
 
 export function Button({
@@ -17,7 +17,7 @@ export function Button({
   return (
     <button
       type="button"
-      className={`inline-flex h-11 items-center justify-center gap-2 px-3 font-mono text-xs tracking-wide uppercase disabled:cursor-not-allowed disabled:opacity-40 ${TONE[tone]} ${className}`}
+      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium tracking-tight transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${TONE[tone]} ${className}`}
       {...props}
     >
       {children}
@@ -47,7 +47,7 @@ export function Field({
   const shown = Number.isInteger(step) ? Math.round(value).toString() : value.toFixed(step < 0.1 ? 2 : 1);
   return (
     <label className="block py-1">
-      <span className="flex items-baseline justify-between gap-3 font-mono text-xs">
+      <span className="flex items-baseline justify-between gap-3 text-[12px]">
         <span className="text-muted">{label}</span>
         <span className="tabular-nums text-ink">
           {shown}
