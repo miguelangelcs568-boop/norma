@@ -32,7 +32,7 @@ export function Desk() {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-vellum text-ink">
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-vellum text-ink">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-sheet px-4 py-2.5 md:px-5">
         <div className="min-w-0">
           <p className="text-[11px] font-medium tracking-[0.18em] text-muted uppercase">NORMA</p>
@@ -69,19 +69,19 @@ export function Desk() {
           }}
         />
       )}
-      <div className="flex gap-1 border-b border-line p-2 md:hidden">
+      <div className="flex shrink-0 gap-1 border-b border-line p-2 md:hidden">
         <PaneButton current={pane} id="archivo" label="Archivo" />
         <PaneButton current={pane} id="mesa" label="Mesa" />
         <PaneButton current={pane} id="director" label="Orden" />
       </div>
-      <div className="grid min-h-0 flex-1 md:grid-cols-[15rem_minmax(0,1fr)_22rem]">
-        <div className={pane === "archivo" ? "min-h-0" : "hidden md:block"}>
+      <div className="grid min-h-0 flex-1 overflow-hidden md:grid-cols-[15rem_minmax(0,1fr)_22rem]">
+        <div className={`${pane === "archivo" ? "flex" : "hidden md:flex"} h-full min-h-0 flex-col overflow-hidden`}>
           <Tree />
         </div>
-        <main className={`${pane === "mesa" ? "flex" : "hidden md:flex"} min-h-0 flex-col overflow-hidden`}>
+        <main className={`${pane === "mesa" ? "flex" : "hidden md:flex"} h-full min-h-0 flex-col overflow-hidden`}>
           {asset ? <Stage asset={asset} keys={keys} /> : null}
         </main>
-        <div className={pane === "director" ? "min-h-0" : "hidden md:block"}>
+        <div className={`${pane === "director" ? "flex" : "hidden md:flex"} h-full min-h-0 flex-col overflow-hidden`}>
           <Director keys={keys} />
         </div>
       </div>

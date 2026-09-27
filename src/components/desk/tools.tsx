@@ -89,9 +89,8 @@ export function ToolRow({
     asset.kind === "fondo" ? ["fondo"] : asset.kind === "prop" ? ["prop"] : ["frente", "perfil", "tres_cuartos", "espalda", "expresion"];
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-t border-line bg-sheet/70 p-3">
-      <div className="flex flex-wrap gap-2">
-        <p className="flex h-9 items-center text-[11px] font-medium tracking-[0.14em] text-muted uppercase">Cuesta 0</p>
+    <div className="max-h-[28vh] shrink-0 overflow-y-auto border-t border-line bg-sheet/70 p-2">
+      <div className="flex flex-wrap gap-1.5">
         <input
           ref={fileRef}
           type="file"
@@ -121,7 +120,7 @@ export function ToolRow({
         )}
         {(asset.kind === "personaje" || asset.kind === "prop") && (
           <Button onClick={place} disabled={!src}>
-            Poner en la escena
+            En escena
           </Button>
         )}
         {asset.activeTakeId && (
@@ -134,9 +133,6 @@ export function ToolRow({
             <Lock className="size-4" /> Fijar
           </Button>
         )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <p className="flex h-9 items-center text-[11px] font-medium tracking-[0.14em] text-muted uppercase">Una lámina</p>
         {views.map((view) => (
           <Button
             key={view}

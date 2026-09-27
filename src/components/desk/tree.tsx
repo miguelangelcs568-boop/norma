@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
-import { Clapperboard, FolderOpen, HardDrive, Image as ImageIcon, Map, Plus, UserRound } from "lucide-react";
-import { Button } from "@/components/desk/controls";
+import { Clapperboard, FolderOpen, HardDrive, Image as ImageIcon, Map, Plus, RotateCcw, UserRound } from "lucide-react";
 import { downloadPack, packProject, readPackFile } from "@/lib/desk/pack";
 import { emptySpec, nid, useDesk } from "@/lib/desk/store";
 import type { AssetKind } from "@/lib/desk/types";
@@ -34,7 +33,7 @@ export function Tree() {
       const pack = await packProject(project);
       downloadPack(pack);
       pushTrace({ role: "tool", tool: "guardar", text: "Corto bajado a Descargas.", cost: 0 });
-      setNote("En Descargas, archivo .norma.json");
+      setNote("En Descargas");
     } catch (err) {
       setNote(err instanceof Error ? err.message : "No se pudo guardar");
     }
@@ -45,15 +44,15 @@ export function Tree() {
       const next = await readPackFile(file);
       loadProject(next);
       pushTrace({ role: "tool", tool: "abrir", text: `Abierto ${next.title} desde el PC.`, cost: 0 });
-      setNote("Abierto desde el archivo");
+      setNote("Abierto");
     } catch (err) {
       setNote(err instanceof Error ? err.message : "No se pudo abrir");
     }
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-line bg-sheet md:border-r">
-      <div className="min-h-0 flex-1 overflow-y-auto py-3">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-line bg-sheet md:border-r">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3">
         {groups.map((group) => {
           const Icon = KIND_ICON[group.kind];
           const items = project.assets.filter((asset) => asset.kind === group.kind);
@@ -63,7 +62,7 @@ export function Tree() {
                 <p className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">{group.label}</p>
                 <button
                   type="button"
-                  className="flex size-7 items-center justify-center rounded-lg text-muted hover:bg-fill hover:text-ink"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-fill hover:text-ink"
                   aria-label={`Nuevo ${group.label}`}
                   onClick={() =>
                     addAsset({
@@ -104,7 +103,7 @@ export function Tree() {
           );
         })}
       </div>
-      <div className="space-y-2 border-t border-line p-3">
+      <div className="shrink-0 border-t border-line p-2">
         <input
           ref={fileRef}
           type="file"
@@ -116,16 +115,21 @@ export function Tree() {
             if (file) void openLocal(file);
           }}
         />
-        <Button className="w-full" onClick={() => void saveLocal()}>
-          <HardDrive className="size-4" /> Guardar en el PC
-        </Button>
-        <Button className="w-full" onClick={() => fileRef.current?.click()}>
-          <FolderOpen className="size-4" /> Abrir del PC
-        </Button>
-        <Button className="w-full" onClick={resetDemo}>
-          Volver al corto
-        </Button>
-        {note && <p className="text-[11px] leading-snug text-muted">{note}</p>}
+        <div className="grid grid-cols-3 gap-1">
+          <button type="button" className="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-ink hover:bg-fill" onClick={() => void saveLocal()}>
+            <HardDrive className="size-4" />
+            <span className="text-[10px] leading-tight">Guardar</span>
+          </button>
+          <button type="button" className="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-ink hover:bg-fill" onClick={() => fileRef.current?.click()}>
+            <FolderOpen className="size-4" />
+            <span className="text-[10px] leading-tight">Abrir</span>
+          </button>
+          <button type="button" className="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-ink hover:bg-fill" onClick={resetDemo}>
+            <RotateCcw className="size-4" />
+            <span className="text-[10px] leading-tight">Corto</span>
+          </button>
+        </div>
+        {note && <p className="mt-1 truncate text-center text-[10px] text-muted">{note}</p>}
       </div>
     </aside>
   );
