@@ -10,21 +10,39 @@ El director es DeepSeek. Mira la lámina abierta y llama herramientas: ficha, pa
 
 ## En tu máquina
 
-```bash
+Usa **Símbolo del sistema** (`cmd`), no PowerShell, si Windows te bloquea `npm`.
+
+```bat
+cd %USERPROFILE%\norma
 npm install
-cp .env.example .env
+copy .env.example .env
+npm run dev
 ```
+
+Abre `http://localhost:8080`.
 
 En `.env`:
 
 - `DEEPSEEK_API_KEY` para el director.
 - `XAI_API_KEY` solo si vas a pedir una lámina nueva. También puedes pegarla en Ajustes. No la subas al repositorio.
 
-```bash
+## Que los cambios del repo aparezcan solos
+
+Yo no puedo escribir en tu PC. El puente es GitHub. Deja **dos** ventanas de `cmd` abiertas dentro de la carpeta `norma`:
+
+Ventana 1 — el escritorio:
+
+```bat
 npm run dev
 ```
 
-Abre `http://localhost:8080`.
+Ventana 2 — baja lo que yo suba, cada 20 segundos:
+
+```bat
+scripts\seguir-github.bat
+```
+
+No las cierres. Recarga el navegador si un cambio no se ve solo. Si un día cambio librerías (`package.json`), en la ventana 1 para con Ctrl+C, corre `npm install` y otra vez `npm run dev`.
 
 ## Qué hay abierto
 
