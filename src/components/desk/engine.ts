@@ -55,7 +55,7 @@ export async function runLocal(brief: string, asset: Asset | undefined, imageKey
     });
     return;
   }
-  pushTrace({ role: "director", text: `Pidiendo lámina: ${VIEW_LABEL[view]}. Espera."` });
+  pushTrace({ role: "director", text: `Pidiendo lámina: ${VIEW_LABEL[view]}. Espera.` });
   await mintPlate(asset, view, imageKey);
 }
 
