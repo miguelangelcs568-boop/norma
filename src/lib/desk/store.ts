@@ -15,6 +15,10 @@ function take(id: string, view: ViewName, label: string, src: string, locked = t
   return { id, view, label, src, locked, cost: 0 };
 }
 
+function line(text: string): Trace {
+  return { id: "t0", role: "director", text };
+}
+
 export function seedProject(): DeskProject {
   const lina: Asset = {
     id: "lina",
@@ -32,6 +36,7 @@ export function seedProject(): DeskProject {
       take("lina-perfil", "perfil", "Perfil", "/desk/lina-perfil.jpg"),
     ],
     activeTakeId: "lina-frente",
+    thread: [line("Chat de Lina. Frente y perfil ya están. Aquí no se inventa otra cara.")],
   };
   const estero: Asset = {
     id: "estero",
@@ -44,6 +49,7 @@ export function seedProject(): DeskProject {
     },
     takes: [take("estero-fondo", "fondo", "Fondo", "/desk/estero.jpg")],
     activeTakeId: "estero-fondo",
+    thread: [line("Chat del Estero norte. Lugar ya pintado. Sin gente en el fondo.")],
   };
   const escena: Asset = {
     id: "pl-010",
@@ -55,6 +61,7 @@ export function seedProject(): DeskProject {
     },
     takes: [],
     activeTakeId: null,
+    thread: [line("Chat del plano. Se compone, no se pinta el capítulo.")],
     scene: {
       backgroundId: "estero",
       layers: [
@@ -75,13 +82,7 @@ export function seedProject(): DeskProject {
     assets: [lina, estero, escena],
     selectedId: "lina",
     platesSpent: 0,
-    trace: [
-      {
-        id: "t0",
-        role: "director",
-        text: "Dime una frase. «perfil» reusa a Lina. «quiero un personaje alto con traje» abre ficha nueva y pide el frente. No pintamos el capítulo.",
-      },
-    ],
+    trace: [line("Estudio. Cada activo tiene su chat. El mundo es el mismo.")],
   };
 }
 
@@ -114,6 +115,10 @@ function mapAsset(project: DeskProject, id: string, fn: (asset: Asset) => Asset)
 
 function nid(): string {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function withThread(asset: Asset): Asset {
+  return { ...asset, thread: asset.thread ?? [] };
 }
 
 export const useDesk = create<State>()(
@@ -151,7 +156,11 @@ export const useDesk = create<State>()(
       spendPlate: () => set({ project: { ...get().project, platesSpent: get().project.platesSpent + 1 } }),
       addAsset: (asset) =>
         set({
-          project: { ...get().project, assets: [...get().project.assets, asset], selectedId: asset.id },
+          project: {
+            ...get().project,
+            assets: [...get().project.assets, withThread(asset)],
+            selectedId: asset.id,
+          },
           pane: "mesa",
         }),
       rename: (id, name) =>
@@ -201,12 +210,29 @@ export const useDesk = create<State>()(
         }),
       pushTrace: (trace) =>
         set({
-          project: {
-            ...get().project,
-            trace: [...get().project.trace, { ...trace, id: nid() }].slice(-40),
-          },
+          project: (() => {
+            const project = get().project;
+            const next: Trace = { ...trace, id: nid() };
+            const selected = project.assets.find((item) => item.id === project.selectedId);
+            if (!selected) {
+              return { ...project, trace: [...project.trace, next].slice(-40) };
+            }
+            const base = selected.thread && selected.thread.length > 0 ? selected.thread : [];
+            return mapAsset(project, selected.id, (asset) => ({
+              ...asset,
+              thread: [...base, next].slice(-80),
+            }));
+          })(),
         }),
-      loadProject: (project) => set({ project, pane: "mesa", lastBrief: null }),
+      loadProject: (project) =>
+        set({
+          project: {
+            ...project,
+            assets: project.assets.map(withThread),
+          },
+          pane: "mesa",
+          lastBrief: null,
+        }),
       resetDemo: () => set({ project: seedProject(), pane: "mesa", lastBrief: null }),
     }),
     {
