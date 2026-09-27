@@ -59,7 +59,7 @@ export function SettingsPanel({
           <section className="grid gap-4">
             <p className="text-[12px] font-medium text-muted">Claves</p>
             <label className="block text-[12px] text-muted">
-              DeepSeek · el director
+              DeepSeek · el director (hablar y encargar)
               <input
                 type="password"
                 value={keys.deepseek}
@@ -70,16 +70,19 @@ export function SettingsPanel({
               />
             </label>
             <label className="block text-[12px] text-muted">
-              Imagen · solo si tu máquina no la trae
+              xAI · pincel fino (opcional)
               <input
                 type="password"
                 value={keys.image}
                 autoComplete="off"
                 onChange={(event) => onChange({ ...keys, image: event.target.value })}
                 className="mt-1.5 h-11 w-full rounded-xl border border-line bg-vellum px-3 text-[14px] text-ink outline-none focus:border-accent"
+                placeholder="vacío = motor de prueba gratis"
               />
             </label>
-            <p className="text-[11px] leading-relaxed text-muted">Se guardan en este navegador. El espejo de GitHub no las pisa.</p>
+            <p className="text-[11px] leading-relaxed text-muted">
+              DeepSeek no pinta. Sin clave xAI el escritorio usa un motor de prueba. Las claves se quedan en este navegador.
+            </p>
           </section>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-5 py-3.5">
