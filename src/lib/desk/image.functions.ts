@@ -12,10 +12,21 @@ function lockedPrompt(prompt: string, view: string) {
   ].join(" ");
 }
 
+function friendlyError(raw: string): string {
+  const text = raw.toLowerCase();
+  if (text.includes("429") || text.includes("limit") || text.includes("rpm")) {
+    return "El pincel gratis está ocupado. Espera un minuto y pide otra vez. No uses Grok de pago.";
+  }
+  if (text.includes("401") || text.includes("api key")) {
+    return "Ese motor pide clave. NORMA usa el pincel de prueba; reintenta en un minuto.";
+  }
+  return "El pincel no pudo pintar ahora. Espera un poco y vuelve a pedir la lámina.";
+}
+
 async function bytesToDataUrl(res: Response): Promise<PlateResult> {
   if (!res.ok) {
     const detail = await res.text();
-    return { ok: false, error: `El motor de imagen respondió ${res.status}. ${detail.slice(0, 160)}` };
+    return { ok: false, error: friendlyError(`${res.status} ${detail}`) };
   }
   const ctype = res.headers.get("content-type") || "";
   if (ctype.includes("application/json")) {
@@ -23,12 +34,13 @@ async function bytesToDataUrl(res: Response): Promise<PlateResult> {
       data?: { b64_json?: string; url?: string }[];
       url?: string;
       b64_json?: string;
+      error?: unknown;
     };
     const item = body.data?.[0];
     const b64 = item?.b64_json || body.b64_json;
     if (b64) return { ok: true, dataUrl: `data:image/jpeg;base64,${b64}` };
     const url = item?.url || body.url;
-    if (!url) return { ok: false, error: "El motor no devolvió imagen." };
+    if (!url) return { ok: false, error: friendlyError(JSON.stringify(body).slice(0, 200)) };
     const image = await fetch(url);
     if (!image.ok) return { ok: false, error: "No pude descargar la lámina." };
     const bytes = Buffer.from(await image.arrayBuffer());
@@ -36,7 +48,7 @@ async function bytesToDataUrl(res: Response): Promise<PlateResult> {
     return { ok: true, dataUrl: `data:${mime};base64,${bytes.toString("base64")}` };
   }
   const bytes = Buffer.from(await res.arrayBuffer());
-  if (bytes.length < 80) return { ok: false, error: "El motor de prueba no devolvió una imagen." };
+  if (bytes.length < 80) return { ok: false, error: "El pincel de prueba no devolvió una imagen." };
   const mime = ctype.startsWith("image/") ? ctype.split(";")[0] : "image/jpeg";
   return { ok: true, dataUrl: `data:${mime};base64,${bytes.toString("base64")}` };
 }
@@ -71,19 +83,31 @@ async function paintWithXai(apiKey: string, prompt: string, view: string, refere
   return bytesToDataUrl(res);
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function paintTrial(prompt: string, view: string): Promise<PlateResult> {
   const locked = lockedPrompt(prompt, view);
   const width = view === "fondo" ? 1280 : 768;
   const height = view === "fondo" ? 720 : 1152;
-  const query = new URLSearchParams({
-    model: "flux",
-    width: String(width),
-    height: String(height),
-    nologo: "true",
-  });
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(locked)}?${query.toString()}`;
-  const res = await fetch(url);
-  return bytesToDataUrl(res);
+  const models = ["flux", "turbo"];
+  let last: PlateResult = { ok: false, error: "El pincel de prueba no respondió." };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const query = new URLSearchParams({
+      model: models[attempt % models.length],
+      width: String(width),
+      height: String(height),
+      nologo: "true",
+      seed: String(47 + attempt),
+    });
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(locked)}?${query.toString()}`;
+    const res = await fetch(url);
+    last = await bytesToDataUrl(res);
+    if (last.ok) return last;
+    await sleep(2800 * (attempt + 1));
+  }
+  return { ok: false, error: last.error };
 }
 
 export const generarLamina = createServerFn({ method: "POST" })
