@@ -4,7 +4,7 @@ import { useResolvedSrc } from "@/components/desk/media";
 import { SceneBoard } from "@/components/desk/scene";
 import { ToolRow } from "@/components/desk/tools";
 import { activeSrc, useDesk } from "@/lib/desk/store";
-import type { Asset, Take, ViewName } from "@/lib/desk/types";
+import { VIEW_LABEL, missingViews, viewsFor, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
 export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string; image: string } }) {
   const url = useResolvedSrc(activeSrc(asset));
@@ -15,6 +15,8 @@ export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string;
   const [armed, setArmed] = useState<ViewName | null>(null);
   const [board, setBoard] = useState<"toma" | "hoja">("toma");
   const [guide, setGuide] = useState(false);
+  const slots = viewsFor(asset.kind);
+  const miss = missingViews(asset);
 
   async function run(view: ViewName) {
     setError(null);
@@ -45,20 +47,35 @@ export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string;
         </div>
       ) : (
         <>
-          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-line px-4 py-2">
-            {asset.takes.map((take) => (
-              <button
-                key={take.id}
-                type="button"
-                onClick={() => setActiveTake(asset.id, take.id)}
-                className={`h-8 shrink-0 rounded-full px-3 text-[12px] font-medium ${take.id === asset.activeTakeId ? "bg-ink text-sheet" : "border border-line bg-sheet text-ink"}`}
-              >
-                {take.label}
-                {take.locked ? " · fija" : ""}
-              </button>
-            ))}
-            {asset.takes.length === 0 && <p className="text-[13px] text-muted">Todavía no hay lámina. Sube un boceto o pide una.</p>}
-          </div>
+          {slots.length > 0 && (
+            <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-line px-4 py-2">
+              {slots.map((view) => {
+                const take = asset.takes.find((item) => item.view === view);
+                const on = take && take.id === asset.activeTakeId;
+                return (
+                  <button
+                    key={view}
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => {
+                      if (take) setActiveTake(asset.id, take.id);
+                      else void run(view);
+                    }}
+                    className={`h-16 w-24 shrink-0 overflow-hidden rounded-2xl border text-left ${on ? "border-ink" : "border-line"} ${take ? "bg-sheet" : "border-dashed bg-fill/40"}`}
+                  >
+                    {take ? (
+                      <SlotThumb take={take} />
+                    ) : (
+                      <span className="flex h-full flex-col justify-between p-2 text-[11px] leading-tight text-muted">
+                        <span>{VIEW_LABEL[view]}</span>
+                        <span>{busy === view ? "Pidiendo" : "Pedir"}</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="grid place-items-center bg-vellum p-6">
               {board === "hoja" && asset.kind === "personaje" ? (
@@ -69,7 +86,11 @@ export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string;
                   {guide && asset.kind === "personaje" && <HeadGuide />}
                 </div>
               ) : (
-                <p className="text-[13px] text-muted">Mesa vacía. Sube un boceto o pide una vista.</p>
+                <p className="max-w-sm text-center text-[13px] text-muted">
+                  {miss.length > 0
+                    ? `Mesa vacía. Pulsa un hueco para pedir ${VIEW_LABEL[miss[0]]}.`
+                    : "Mesa vacía. Sube un boceto."}
+                </p>
               )}
             </div>
             {asset.kind === "personaje" && <Ficha asset={asset} />}
@@ -89,6 +110,16 @@ export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string;
       )}
       {error && <p className="px-4 py-2 text-[12px] text-accent">{error}</p>}
     </div>
+  );
+}
+
+function SlotThumb({ take }: { take: Take }) {
+  const url = useResolvedSrc(take.src);
+  return (
+    <span className="relative block h-full w-full">
+      {url ? <img src={url} alt={take.label} className="h-full w-full object-cover" /> : null}
+      <span className="absolute inset-x-0 bottom-0 bg-sheet/80 px-1.5 py-0.5 text-[10px] text-muted">{take.label}</span>
+    </span>
   );
 }
 
