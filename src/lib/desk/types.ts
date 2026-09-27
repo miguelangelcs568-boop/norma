@@ -94,11 +94,11 @@ export function missingViews(asset: Asset): ViewName[] {
 
 export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
-    return `${asset.name}: arrastra a Lina sobre el fondo. Mover cuesta 0. No pidas otra lámina para colocar.`;
+    return `${asset.name}: arrastra sobre el fondo. Mover cuesta 0.`;
   }
   const miss = missingViews(asset);
   if (miss.length === 0) {
-    return `${asset.name} está cubierto. Fija lo bueno. Para una escena lenta: Poner en la escena.`;
+    return `${asset.name} cubierto. Lo que pidas se reusa o se deriva.`;
   }
-  return `${asset.name} · ${asset.kind}. Falta: ${miss.map((view) => VIEW_LABEL[view]).join(", ")}. Pídelo aquí o pulsa el hueco en la mesa.`;
+  return `${asset.name}. Falta ${miss.map((view) => VIEW_LABEL[view]).join(", ")}. Una frase en Orden basta.`;
 }

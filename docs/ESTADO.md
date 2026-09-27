@@ -2,29 +2,30 @@
 
 Snapshot vivo. Actualízalo en el mismo commit que cambia producto, arquitectura o el flujo local.
 
-## Ahora (2026-09-27 tarde)
+## Ahora (2026-09-27 noche)
 
 - Repo: `miguelangelcs568-boop/norma`, rama `main`.
-- Ensayo en vivo: `vivo.bat`. Código en GitHub.
-- Cenit fuera. Voces fuera. 2D primero.
-- Láminas: si hay `XAI_API_KEY` o clave en Ajustes, pinta Grok Imagine. Si no, motor de prueba gratis (Pollinations/Flux) para que Miguel pruebe en el escritorio sin otra cuenta.
+- Ensayo: `vivo.bat` → `http://localhost:8080`.
+- Interfaz: papel cálido de Punta Palma (ya no chrome frío de teléfono).
+- Intérprete de pedidos en `src/lib/desk/brief.ts`. Una frase vaga se vuelve ficha + brief de pintura antes de tocar el pincel.
+- Ejemplo: «quiero un personaje alto con traje» crea personaje nuevo (no pisa a Lina), escribe medida/ropa/nunca, pide el frente como maestro.
+- «perfil» con Lina abierta deriva o reusa. No inventa otra cara.
+- Láminas: xAI si hay clave; si no, motor de prueba solo cuando el activo aún no tiene toma.
 
 ## Qué hay debajo
 
-1. Miguel pide y aprueba.
-2. Grok programa el escritorio.
-3. DeepSeek dirige (ve la lámina, escribe brief, llama tools). No genera píxeles.
-4. Pincel: xAI si hay clave; si no, motor de prueba.
-5. Mesa local: recortar, mover, paleta, exportar. Coste 0.
+1. Miguel dice una frase.
+2. NORMA la interpreta (Orden muestra cómo lo leí y la prensa: reusa / deriva / pinta).
+3. DeepSeek, si hace falta, obedece ese brief. No lo vuelve genérico.
+4. Pincel pinta solo maestros. Mesa recorta, mueve, exporta a coste 0.
 
-## Cómo probar ahora en el escritorio
+## Cómo probar
 
-1. `vivo.bat` → `http://localhost:8080`.
-2. Sin DeepSeek: en el Director escribe solo `fondo` o `perfil`.
-3. Con DeepSeek (saldo): «muelle de noche, sin personas».
-4. No hace falta clave xAI para el primer ensayo.
+1. `vivo.bat`.
+2. En Orden: `quiero un personaje alto con traje`.
+3. Con Lina abierta: `perfil` — no debe pintar otra persona.
+4. `quiero un fondo del muelle de noche`.
 
 ## Qué no está
 
-- Vistas extra de Lina, más planos, línea de tiempo, voces, 3D.
-- OpenToonz / Krita enchufados (más adelante).
+- Vistas extra de Lina ya pintadas a mano, línea de tiempo, voces, 3D, ComfyUI local.
