@@ -12,6 +12,7 @@ import { selectedAsset, useDesk } from "@/lib/desk/store";
 export function Desk() {
   const project = useDesk((s) => s.project);
   const pane = useDesk((s) => s.pane);
+  const lastBrief = useDesk((s) => s.lastBrief);
   const asset = selectedAsset(project);
   const [settings, setSettings] = useState(false);
   const [keys, setKeys] = useState({ deepseek: "", image: "" });
@@ -32,14 +33,19 @@ export function Desk() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-vellum text-ink">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line/80 bg-sheet/80 px-4 py-2.5 backdrop-blur-xl md:px-5">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-sheet px-4 py-2.5 md:px-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">NORMA · escritorio de diseño</p>
-          <h1 className="truncate font-sans text-[22px] font-semibold leading-tight tracking-tight">{project.title}</h1>
+          <p className="text-[11px] font-medium tracking-[0.18em] text-muted uppercase">NORMA</p>
+          <h1 className="truncate font-sans text-[20px] font-semibold leading-tight tracking-tight">{project.title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {lastBrief && (
+            <p className="hidden max-w-[14rem] truncate rounded-full bg-fill px-3 py-1 text-[11px] text-muted sm:block">
+              {lastBrief.press === "pintar" ? "Pincel" : lastBrief.press === "derivar" ? "Deriva" : lastBrief.press === "reusar" ? "Canon" : "Mesa"}
+            </p>
+          )}
           <p className="hidden text-[12px] text-muted tabular-nums sm:block">
-            Láminas pedidas <span className="font-medium text-ink">{project.platesSpent}</span>
+            Maestros <span className="font-medium text-ink">{project.platesSpent}</span>
           </p>
           <Button onClick={() => chooseTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Tema claro" : "Tema oscuro"}>
             {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
@@ -66,9 +72,9 @@ export function Desk() {
       <div className="flex gap-1 border-b border-line p-2 md:hidden">
         <PaneButton current={pane} id="archivo" label="Archivo" />
         <PaneButton current={pane} id="mesa" label="Mesa" />
-        <PaneButton current={pane} id="director" label="Director" />
+        <PaneButton current={pane} id="director" label="Orden" />
       </div>
-      <div className="grid min-h-0 flex-1 md:grid-cols-[16rem_minmax(0,1fr)_22rem]">
+      <div className="grid min-h-0 flex-1 md:grid-cols-[15rem_minmax(0,1fr)_22rem]">
         <div className={pane === "archivo" ? "min-h-0" : "hidden md:block"}>
           <Tree />
         </div>
@@ -89,7 +95,7 @@ function PaneButton({ current, id, label }: { current: string; id: "archivo" | "
     <button
       type="button"
       onClick={() => setPane(id)}
-      className={`h-9 flex-1 rounded-full text-[13px] font-medium ${current === id ? "bg-ink text-sheet" : "border border-line bg-sheet text-ink"}`}
+      className={`h-9 flex-1 rounded-xl text-[13px] font-medium ${current === id ? "bg-ink text-sheet" : "border border-line bg-sheet text-ink"}`}
     >
       {label}
     </button>
