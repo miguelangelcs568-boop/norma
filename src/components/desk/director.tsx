@@ -6,6 +6,7 @@ import { useResolvedSrc } from "@/components/desk/media";
 import { dirigir } from "@/lib/desk/deepseek.functions";
 import { shrinkSrc } from "@/lib/desk/images";
 import { activeSrc, selectedAsset, useDesk } from "@/lib/desk/store";
+import { briefFor } from "@/lib/desk/types";
 
 export function Director({ keys }: { keys: { deepseek: string; image: string } }) {
   const project = useDesk((s) => s.project);
@@ -15,6 +16,7 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
   const bottomRef = useRef<HTMLDivElement>(null);
   const asset = selectedAsset(project);
   const url = useResolvedSrc(activeSrc(asset));
+  const context = asset ? briefFor(asset) : "Abre un personaje, un fondo o una escena.";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -39,7 +41,7 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
       const result = await dirigir({
         data: {
           apiKey: keys.deepseek,
-          brief: `${brief}\n\nAbierto: ${asset?.name ?? "nada"} (${asset?.kind ?? ""}). Vestuario: ${asset?.spec.costume ?? ""}.`,
+          brief: `${brief}\n\nAbierto: ${asset?.name ?? "nada"} (${asset?.kind ?? ""}). ${context} Vestuario: ${asset?.spec.costume ?? ""}.`,
           history,
           imageDataUrl,
         },
@@ -72,9 +74,7 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
         <p className="text-[11px] font-medium tracking-[0.14em] text-muted uppercase">
           {keys.deepseek ? "Director · obedece" : "Director · órdenes cortas"}
         </p>
-        <p className="mt-1 text-[12px] leading-snug text-muted">
-          Tú pides. El director encarga. El pincel pinta. Tú apruebas.
-        </p>
+        <p className="mt-1.5 text-[13px] leading-snug text-ink">{context}</p>
       </header>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
         {project.trace.map((item) => (
@@ -100,8 +100,9 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="fondo · perfil · frente · o una frase"
-          className="h-10 min-w-0 flex-1 rounded-full border border-line bg-sheet px-3.5 text-[13px] text-ink outline-none focus:border-accent"
+          disabled={busy}
+          placeholder={busy ? "Pintando…" : "fondo · perfil · frente · o una frase"}
+          className="h-10 min-w-0 flex-1 rounded-full border border-line bg-sheet px-3.5 text-[13px] text-ink outline-none focus:border-accent disabled:opacity-60"
         />
         <Button tone="ink" type="submit" disabled={busy} aria-label="Enviar">
           <Send className="size-4" />

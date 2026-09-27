@@ -79,3 +79,26 @@ export const VIEW_LABEL: Record<ViewName, string> = {
   fondo: "Fondo",
   prop: "Prop",
 };
+
+export function viewsFor(kind: AssetKind): ViewName[] {
+  if (kind === "fondo") return ["fondo"];
+  if (kind === "prop") return ["prop"];
+  if (kind === "personaje") return ["frente", "perfil", "tres_cuartos", "espalda", "expresion"];
+  return [];
+}
+
+export function missingViews(asset: Asset): ViewName[] {
+  const have = new Set(asset.takes.map((take) => take.view));
+  return viewsFor(asset.kind).filter((view) => !have.has(view));
+}
+
+export function briefFor(asset: Asset): string {
+  if (asset.kind === "escena") {
+    return `${asset.name}: arrastra a Lina sobre el fondo. Mover cuesta 0. No pidas otra lámina para colocar.`;
+  }
+  const miss = missingViews(asset);
+  if (miss.length === 0) {
+    return `${asset.name} está cubierto. Fija lo bueno. Para una escena lenta: Poner en la escena.`;
+  }
+  return `${asset.name} · ${asset.kind}. Falta: ${miss.map((view) => VIEW_LABEL[view]).join(", ")}. Pídelo aquí o pulsa el hueco en la mesa.`;
+}

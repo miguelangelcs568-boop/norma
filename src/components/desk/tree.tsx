@@ -4,6 +4,12 @@ import { emptySpec, nid, useDesk } from "@/lib/desk/store";
 import type { AssetKind } from "@/lib/desk/types";
 
 const KIND_ICON = { personaje: UserRound, fondo: Map, escena: Clapperboard, prop: ImageIcon };
+const KIND_NEW: Record<AssetKind, string> = {
+  personaje: "Personaje nuevo",
+  fondo: "Fondo nuevo",
+  escena: "Plano nuevo",
+  prop: "Prop nuevo",
+};
 
 export function Tree() {
   const project = useDesk((s) => s.project);
@@ -34,7 +40,7 @@ export function Tree() {
                     addAsset({
                       id: nid(),
                       kind: group.kind,
-                      name: group.label.slice(0, -1),
+                      name: KIND_NEW[group.kind],
                       spec: emptySpec(),
                       takes: [],
                       activeTakeId: null,
@@ -45,7 +51,7 @@ export function Tree() {
                   <Plus className="size-4" />
                 </button>
               </div>
-              {items.length === 0 && <p className="px-4 text-[12px] text-muted">Vacío.</p>}
+              {items.length === 0 && <p className="px-4 text-[12px] text-muted">Vacío. Pulsa + para crear uno.</p>}
               {items.map((asset) => (
                 <button
                   key={asset.id}
