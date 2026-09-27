@@ -99,12 +99,12 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       said,
       intent: "nuevo_personaje",
       view: "frente",
-      spoken: `No es un prompt suelto. ${name}, ${role} Ropa: ${costume} Ficha primero, luego el frente.`,
+      spoken: `No es un prompt suelto. ${name}, ${role} Ropa: ${costume} Ficha primero. El frente solo si hay pincel o un boceto subido.`,
       paint: paintLock("frente", `${name}. ${role} ${costume} Mundo ${WORLD.title}. Una sola persona.`),
       createKind: "personaje",
       createName: name,
       spec: { role, costume, never, notes: said.trim() },
-      press: "pintar",
+      press: "ficha",
     };
   }
 
@@ -116,12 +116,12 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       said,
       intent: "nuevo_fondo",
       view: "fondo",
-      spoken: `Lugar nuevo: ${name}. ${light} Se pinta una vez y despues se rueda.`,
+      spoken: `Lugar nuevo: ${name}. ${light} Ficha primero. Se pinta una vez si hay pincel.`,
       paint: paintLock("fondo", `${name}. ${notes}`),
       createKind: "fondo",
       createName: name,
       spec: { notes, never: ["No pintar personas en el fondo"], role: light },
-      press: "pintar",
+      press: "ficha",
     };
   }
 
@@ -179,21 +179,28 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (asset) {
     return {
       ...empty,
-      spoken: `Abierto: ${asset.name}. Di frente, perfil o fondo. Si es otra persona: un personaje.`,
+      spoken: `Chat de ${asset.name}. Di frente, perfil o sube un boceto. Si es otra persona: un personaje.`,
       paint: paintLock(asset.kind === "fondo" ? "fondo" : "frente", `${asset.name}. ${asset.spec.costume}`),
     };
   }
   return { ...empty, spoken: "Abre un personaje o di quiero un personaje / quiero un fondo." };
 }
 
-export function directorPacket(brief: Brief, asset: Asset | undefined) {
+export function directorPacket(brief: Brief, asset: Asset | undefined, project?: DeskProject) {
+  const roster =
+    project?.assets
+      .map((item) => `- ${item.name} (${item.kind}) vistas:${item.takes.map((take) => take.view).join(",") || "ninguna"}`)
+      .join("\n") ?? "";
   return [
-    `Pedido: ${brief.said}`,
+    `Corto: ${project?.title ?? WORLD.title}`,
+    `Pedido en este chat: ${brief.said}`,
     `Como lo lei: ${brief.spoken}`,
     brief.paint ? `Brief de pintura: ${brief.paint}` : "",
-    `Abierto: ${asset?.name ?? "nada"} (${asset?.kind ?? ""}).`,
+    `Chat abierto: ${asset?.name ?? "nada"} (${asset?.kind ?? ""}).`,
     asset?.spec.costume ? `Vestuario ley: ${asset.spec.costume}` : "",
-    "Obedece el brief. No lo vuelvas generico. Una sola generar_lamina si falta maestro.",
+    asset?.spec.never.length ? `Nunca: ${asset.spec.never.join("; ")}` : "",
+    roster ? `Canon del corto:\n${roster}` : "",
+    "Eres varios oficios en uno: fichista, archivo, prensa. No pintes si puedes reusar o derivar. Una sola generar_lamina si falta maestro y hay pincel.",
   ]
     .filter(Boolean)
     .join("\n");
