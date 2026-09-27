@@ -64,10 +64,15 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
 
   return (
     <aside className="flex h-full min-h-0 flex-col border-line bg-sheet/40 md:border-l">
-      <p className="px-4 py-3 text-[11px] font-medium tracking-[0.14em] text-muted uppercase">
-        {keys.deepseek ? "Director · DeepSeek" : "Director · sin clave"}
-      </p>
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-3">
+      <header className="border-b border-line px-4 py-3">
+        <p className="text-[11px] font-medium tracking-[0.14em] text-muted uppercase">
+          {keys.deepseek ? "Director · obedece" : "Director · sin clave"}
+        </p>
+        <p className="mt-1 text-[12px] leading-snug text-muted">
+          DeepSeek escribe el lugar. Grok pinta la lámina. Tú apruebas.
+        </p>
+      </header>
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
         {project.trace.map((item) => (
           <p
             key={item.id}
@@ -91,7 +96,7 @@ export function Director({ keys }: { keys: { deepseek: string; image: string } }
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder={keys.deepseek ? "Pide una vista o mueve la escena" : "perfil, expresión, paleta, escena"}
+          placeholder={keys.deepseek ? "Ej: muelle de noche, sin gente" : "perfil, expresión, paleta, escena"}
           className="h-10 min-w-0 flex-1 rounded-full border border-line bg-sheet px-3.5 text-[13px] text-ink outline-none focus:border-accent"
         />
         <Button tone="ink" type="submit" disabled={busy} aria-label="Enviar">

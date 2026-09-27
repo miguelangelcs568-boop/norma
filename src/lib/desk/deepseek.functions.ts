@@ -44,7 +44,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "ficha",
-      description: "Actualiza la ficha del personaje abierto. No genera píxeles. Cuesta 0.",
+      description: "Actualiza la ficha del personaje o lugar abierto. No genera píxeles. Cuesta 0.",
       parameters: {
         type: "object",
         properties: {
@@ -62,7 +62,7 @@ const TOOLS = [
     function: {
       name: "generar_lamina",
       description:
-        "Pide UNA lámina nueva al motor de imagen. Cuesta 1. Úsala solo si el usuario pidió un dibujo que no existe. Como máximo una por respuesta.",
+        "Pide UNA lámina nueva al motor de imagen (Grok). Cuesta 1. Úsala solo si el usuario pidió un dibujo que no existe. Máximo una por respuesta. Un escenario nuevo es view fondo, sin personas.",
       parameters: {
         type: "object",
         properties: {
@@ -72,7 +72,7 @@ const TOOLS = [
           },
           prompt: {
             type: "string",
-            description: "Instrucción concreta: misma ropa, mismos colores, qué cambia. Sin texto en la imagen.",
+            description: "Instrucción concreta: misma ropa o mismo lugar, mismos colores, qué cambia. Sin texto en la imagen. Fondo: sin personajes.",
           },
         },
         required: ["view", "prompt"],
@@ -106,6 +106,13 @@ const TOOLS = [
 ];
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+
+const SYSTEM =
+  "Eres el director de un estudio 2D. Hablas español, corto. Por defecto OBEDECES: no propones planos ni historia salvo que te lo pidan. " +
+  "No regeneres una película ni a Lina ni el Estero norte sólo para probar. Las láminas aprobadas se reutilizan. " +
+  "Un escenario o lugar nuevo: ficha breve (notes + never) y UNA generar_lamina con view fondo, sin personas, sin texto. " +
+  "componer_escena, paleta y ficha cuestan 0. generar_lamina cuesta 1 y solo una por respuesta. " +
+  "Si hay imagen adjunta, mírala antes de decidir. No describas un dibujo que no vas a pedir.";
 
 export const dirigir = createServerFn({ method: "POST" })
   .validator((input: { apiKey?: string; brief: string; history: ChatMessage[]; imageDataUrl?: string }) => {
@@ -144,11 +151,7 @@ export const dirigir = createServerFn({ method: "POST" })
         max_tokens: 700,
         temperature: 0.2,
         messages: [
-          {
-            role: "system",
-            content:
-              "Eres el director de layout de un estudio de animación. Hablas en español, corto. No regeneres una película. Las láminas ya hechas se reutilizan. componer_escena y paleta y ficha cuestan 0. generar_lamina cuesta 1 y solo una por respuesta. Si hay imagen adjunta, mírala antes de decidir. No describas un dibujo que no vas a pedir.",
-          },
+          { role: "system", content: SYSTEM },
           ...data.history.map((message) => ({ role: message.role, content: message.content })),
           { role: "user", content: userContent },
         ],
