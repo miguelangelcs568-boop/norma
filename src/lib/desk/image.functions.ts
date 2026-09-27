@@ -80,15 +80,10 @@ async function paintTrial(prompt: string, view: string): Promise<PlateResult> {
     width: String(width),
     height: String(height),
     nologo: "true",
-    enhance: "true",
   });
-  const primary = `https://gen.pollinations.ai/image/${encodeURIComponent(locked)}?${query.toString()}`;
-  const fallback = `https://image.pollinations.ai/prompt/${encodeURIComponent(locked)}?${query.toString()}`;
-  const first = await fetch(primary);
-  const painted = await bytesToDataUrl(first);
-  if (painted.ok) return painted;
-  const second = await fetch(fallback);
-  return bytesToDataUrl(second);
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(locked)}?${query.toString()}`;
+  const res = await fetch(url);
+  return bytesToDataUrl(res);
 }
 
 export const generarLamina = createServerFn({ method: "POST" })
