@@ -1,5 +1,7 @@
-import { Clapperboard, Image as ImageIcon, Map, Plus, UserRound } from "lucide-react";
+import { useRef, useState } from "react";
+import { Clapperboard, FolderOpen, HardDrive, Image as ImageIcon, Map, Plus, UserRound } from "lucide-react";
 import { Button } from "@/components/desk/controls";
+import { downloadPack, packProject, readPackFile } from "@/lib/desk/pack";
 import { emptySpec, nid, useDesk } from "@/lib/desk/store";
 import type { AssetKind } from "@/lib/desk/types";
 
@@ -16,12 +18,39 @@ export function Tree() {
   const select = useDesk((s) => s.select);
   const addAsset = useDesk((s) => s.addAsset);
   const resetDemo = useDesk((s) => s.resetDemo);
+  const loadProject = useDesk((s) => s.loadProject);
+  const pushTrace = useDesk((s) => s.pushTrace);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [note, setNote] = useState<string | null>(null);
   const groups: { kind: AssetKind; label: string }[] = [
     { kind: "personaje", label: "Personajes" },
     { kind: "fondo", label: "Lugares" },
     { kind: "escena", label: "Planos" },
     { kind: "prop", label: "Props" },
   ];
+
+  async function saveLocal() {
+    try {
+      const pack = await packProject(project);
+      downloadPack(pack);
+      pushTrace({ role: "tool", tool: "guardar", text: "Corto bajado a Descargas. Es un archivo de este PC.", cost: 0 });
+      setNote("En Descargas, archivo .norma.json");
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "No se pudo guardar");
+    }
+  }
+
+  async function openLocal(file: File) {
+    try {
+      const next = await readPackFile(file);
+      loadProject(next);
+      pushTrace({ role: "tool", tool: "abrir", text: `Abierto ${next.title} desde el PC.`, cost: 0 });
+      setNote("Abierto desde el archivo");
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "No se pudo abrir");
+    }
+  }
+
   return (
     <aside className="flex h-full min-h-0 flex-col border-line bg-sheet md:border-r">
       <div className="min-h-0 flex-1 overflow-y-auto py-3">
@@ -68,10 +97,28 @@ export function Tree() {
           );
         })}
       </div>
-      <div className="border-t border-line p-3">
+      <div className="space-y-2 border-t border-line p-3">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,.norma.json,application/json"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) void openLocal(file);
+          }}
+        />
+        <Button className="w-full" onClick={() => void saveLocal()}>
+          <HardDrive className="size-4" /> Guardar en el PC
+        </Button>
+        <Button className="w-full" onClick={() => fileRef.current?.click()}>
+          <FolderOpen className="size-4" /> Abrir del PC
+        </Button>
         <Button className="w-full" onClick={resetDemo}>
           Volver al corto
         </Button>
+        {note && <p className="text-[11px] leading-snug text-muted">{note}</p>}
       </div>
     </aside>
   );
