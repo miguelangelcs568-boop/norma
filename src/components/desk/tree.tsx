@@ -33,7 +33,7 @@ export function Tree() {
     try {
       const pack = await packProject(project);
       downloadPack(pack);
-      pushTrace({ role: "tool", tool: "guardar", text: "Corto bajado a Descargas. Es un archivo de este PC.", cost: 0 });
+      pushTrace({ role: "tool", tool: "guardar", text: "Corto bajado a Descargas.", cost: 0 });
       setNote("En Descargas, archivo .norma.json");
     } catch (err) {
       setNote(err instanceof Error ? err.message : "No se pudo guardar");
@@ -73,6 +73,13 @@ export function Tree() {
                       spec: emptySpec(),
                       takes: [],
                       activeTakeId: null,
+                      thread: [
+                        {
+                          id: nid(),
+                          role: "director",
+                          text: `Chat nuevo de ${KIND_NEW[group.kind]}. El corto sigue siendo ${project.title}.`,
+                        },
+                      ],
                       scene: group.kind === "escena" ? { layers: [] } : undefined,
                     })
                   }
