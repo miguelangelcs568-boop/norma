@@ -3,10 +3,11 @@ import { mintPlate } from "@/components/desk/engine";
 import { useResolvedSrc } from "@/components/desk/media";
 import { SceneBoard } from "@/components/desk/scene";
 import { ToolRow } from "@/components/desk/tools";
+import type { DeskKeys } from "@/lib/desk/keys";
 import { activeSrc, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, missingViews, viewsFor, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
-export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string; image: string } }) {
+export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
   const url = useResolvedSrc(activeSrc(asset));
   const setActiveTake = useDesk((s) => s.setActiveTake);
   const rename = useDesk((s) => s.rename);
@@ -23,7 +24,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string;
     setBusy(view);
     setArmed(null);
     try {
-      await mintPlate(asset, view, keys.image);
+      await mintPlate(asset, view, keys);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo pedir la lámina");
     } finally {
@@ -88,7 +89,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: { deepseek: string;
               ) : (
                 <p className="max-w-sm text-center text-[13px] text-muted">
                   {miss.length > 0
-                    ? `Mesa vacía. Pulsa un hueco para pedir ${VIEW_LABEL[miss[0]]}.`
+                    ? `Mesa vacía. Sube un boceto o pide ${VIEW_LABEL[miss[0]]} si hay pincel.`
                     : "Mesa vacía. Sube un boceto."}
                 </p>
               )}

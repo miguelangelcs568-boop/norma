@@ -2,14 +2,15 @@
 
 ## Ahora (2026-09-27 noche)
 
-- DeepSeek no es obligatorio. Orden interpreta en el PC.
-- Guardar en el PC / Abrir del PC: archivo `.norma.json` en Descargas. Lleva fichas y láminas hechas aquí.
-- El chat de Grok no escribe en el disco de Miguel. `localhost:8080` sí baja archivos.
-- El navegador ya guarda solo (localStorage + IndexedDB). El JSON es la copia que se puede copiar a un USB.
+- Cada personaje, lugar y plano tiene su chat. Cambias de activo y ves su conversación y sus láminas.
+- Todo eso se guarda en el navegador. Guardar en el PC baja fichas + chats + láminas.
+- Pincel por defecto: apagado. Se sube boceto o se deriva. Prueba gratis y xAI son opcionales.
+- DeepSeek no es obligatorio. Si está, usa herramientas: ficha, crear_activo, fijar, paleta, componer, generar_lamina.
+- No vamos a entrenar un modelo de imagen propio. El producto es el estudio (memoria + prensa + chats), no otra caja de prompts.
 
 ## Cómo probar
 
-1. `vivo.bat` → `http://localhost:8080`.
-2. Archivo → Guardar en el PC.
-3. Archivo → Abrir del PC y elige el `.norma.json`.
-4. Sin clave DeepSeek: `quiero un personaje alto con traje`.
+1. `vivo.bat` → F5.
+2. Abre Lina: chat de Lina. Abre Estero: otro chat.
+3. `quiero un personaje alto con traje` crea ficha + chat nuevo.
+4. Archivo → Guardar en el PC.

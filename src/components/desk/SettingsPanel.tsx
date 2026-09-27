@@ -1,5 +1,6 @@
 import { Moon, Sun, X } from "lucide-react";
 import { Button } from "@/components/desk/controls";
+import type { DeskKeys } from "@/lib/desk/keys";
 import type { Theme } from "@/lib/desk/prefs";
 
 export function SettingsPanel({
@@ -10,10 +11,10 @@ export function SettingsPanel({
   onSave,
   onClose,
 }: {
-  keys: { deepseek: string; image: string };
+  keys: DeskKeys;
   theme: Theme;
   onTheme: (theme: Theme) => void;
-  onChange: (keys: { deepseek: string; image: string }) => void;
+  onChange: (keys: DeskKeys) => void;
   onSave: () => void;
   onClose: () => void;
 }) {
@@ -56,10 +57,30 @@ export function SettingsPanel({
               </button>
             </div>
           </section>
+          <section className="grid gap-3">
+            <p className="text-[12px] font-medium text-muted">Pincel</p>
+            {(
+              [
+                ["off", "Apagado", "Subir boceto o derivar. Calidad que controlas."],
+                ["trial", "Prueba gratis", "Rápida y fea. No la uses si ya hay cara."],
+                ["xai", "xAI", "Solo si pegaste clave. Sigue sin ser el eje."],
+              ] as const
+            ).map(([id, label, hint]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onChange({ ...keys, brush: id })}
+                className={`rounded-2xl border px-3 py-2.5 text-left ${keys.brush === id ? "border-ink bg-fill" : "border-line"}`}
+              >
+                <span className="block text-[13px] font-medium text-ink">{label}</span>
+                <span className="block text-[12px] text-muted">{hint}</span>
+              </button>
+            ))}
+          </section>
           <section className="grid gap-4">
             <p className="text-[12px] font-medium text-muted">Claves</p>
             <label className="block text-[12px] text-muted">
-              DeepSeek · el director (hablar y encargar)
+              DeepSeek · director (opcional)
               <input
                 type="password"
                 value={keys.deepseek}
@@ -70,18 +91,18 @@ export function SettingsPanel({
               />
             </label>
             <label className="block text-[12px] text-muted">
-              xAI · pincel fino (opcional)
+              xAI · solo si el pincel es xAI
               <input
                 type="password"
                 value={keys.image}
                 autoComplete="off"
                 onChange={(event) => onChange({ ...keys, image: event.target.value })}
                 className="mt-1.5 h-11 w-full rounded-xl border border-line bg-vellum px-3 text-[14px] text-ink outline-none focus:border-accent"
-                placeholder="vacío = motor de prueba gratis"
+                placeholder="vacío = no usa xAI"
               />
             </label>
             <p className="text-[11px] leading-relaxed text-muted">
-              DeepSeek no pinta. Sin clave xAI el escritorio usa un motor de prueba. Las claves se quedan en este navegador.
+              DeepSeek no pinta. Sin él el chat local sigue. El corto se guarda solo en este navegador y con Guardar en el PC.
             </p>
           </section>
         </div>
