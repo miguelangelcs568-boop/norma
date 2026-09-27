@@ -3,6 +3,7 @@ import { type CallArgs } from "@/lib/desk/deepseek.functions";
 import { getBlob, putBlob } from "@/lib/desk/idb";
 import { generarLamina } from "@/lib/desk/image.functions";
 import { dataUrlToBlob, extractPalette, flipSrc, shrinkSrc } from "@/lib/desk/images";
+import type { DeskKeys } from "@/lib/desk/keys";
 import { activeSrc, emptySpec, nid, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
@@ -11,17 +12,17 @@ export function isShortOrder(brief: string) {
   return text.length < 48 || /^(fondo|perfil|frente|espalda|expres|paleta|escena|tres|ficha)\b/.test(text);
 }
 
-export async function runInterpreted(said: string, asset: Asset | undefined, imageKey: string) {
+export async function runInterpreted(said: string, asset: Asset | undefined, keys: DeskKeys) {
   const brief = interpret(said, asset, useDesk.getState().project);
   useDesk.getState().setLastBrief(brief);
-  await enact(brief, asset, imageKey);
+  await enact(brief, asset, keys);
 }
 
-export async function runLocal(brief: string, asset: Asset | undefined, imageKey: string) {
-  await runInterpreted(brief, asset, imageKey);
+export async function runLocal(brief: string, asset: Asset | undefined, keys: DeskKeys) {
+  await runInterpreted(brief, asset, keys);
 }
 
-async function enact(brief: Brief, asset: Asset | undefined, imageKey: string) {
+async function enact(brief: Brief, asset: Asset | undefined, keys: DeskKeys) {
   const desk = useDesk.getState();
   if (brief.intent === "paleta" && asset) {
     const src = activeSrc(asset);
@@ -52,27 +53,49 @@ async function enact(brief: Brief, asset: Asset | undefined, imageKey: string) {
       spec: { ...emptySpec(), ...brief.spec },
       takes: [],
       activeTakeId: null,
+      thread: [{ id: nid(), role: "director", text: brief.spoken }],
     };
     desk.addAsset(created);
-    desk.pushTrace({ role: "director", text: brief.spoken });
-    if (brief.view) await mintPlate(created, brief.view, imageKey, brief.paint);
+    if (brief.view && keys.brush !== "off") await mintPlate(created, brief.view, keys, brief.paint);
+    else desk.pushTrace({ role: "director", text: "Ficha lista. Sube un boceto o enciende un pincel en Ajustes." });
     return;
   }
   if (brief.intent === "vista" && asset && brief.view) {
-    await mintPlate(asset, brief.view, imageKey, brief.paint);
+    await mintPlate(asset, brief.view, keys, brief.paint);
     return;
   }
   if (brief.intent === "fondo") {
     const target = asset?.kind === "fondo" ? asset : desk.project.assets.find((item) => item.kind === "fondo");
-    if (target) await mintPlate(target, "fondo", imageKey, brief.paint);
+    if (target) await mintPlate(target, "fondo", keys, brief.paint);
     else desk.pushTrace({ role: "director", text: brief.spoken });
     return;
   }
   desk.pushTrace({ role: "director", text: brief.spoken });
 }
 
-export async function runCall(name: string, args: CallArgs, asset: Asset | undefined, imageKey: string) {
+export async function runCall(name: string, args: CallArgs, asset: Asset | undefined, keys: DeskKeys) {
   const desk = useDesk.getState();
+  if (name === "crear_activo") {
+    const kind = args.kind === "fondo" ? "fondo" : "personaje";
+    const created: Asset = {
+      id: nid(),
+      kind,
+      name: args.name || (kind === "fondo" ? "Lugar nuevo" : "Personaje nuevo"),
+      spec: {
+        ...emptySpec(),
+        costume: args.costume,
+        role: args.role,
+        notes: args.notes,
+        never: args.never,
+      },
+      takes: [],
+      activeTakeId: null,
+      thread: [{ id: nid(), role: "director", text: `Chat de ${args.name || kind}. Mismo corto.` }],
+    };
+    desk.addAsset(created);
+    desk.pushTrace({ role: "tool", tool: "crear_activo", text: created.name, cost: 0 });
+    return;
+  }
   if (!asset) return;
   if (name === "ficha") {
     desk.patchSpec(asset.id, {
@@ -84,8 +107,13 @@ export async function runCall(name: string, args: CallArgs, asset: Asset | undef
     desk.pushTrace({ role: "tool", tool: "ficha", text: "Ficha actualizada. 0 laminas.", cost: 0 });
     return;
   }
+  if (name === "fijar" && asset.activeTakeId) {
+    desk.lockTake(asset.id, asset.activeTakeId);
+    desk.pushTrace({ role: "tool", tool: "fijar", text: `Toma fijada en ${asset.name}.`, cost: 0 });
+    return;
+  }
   if (name === "paleta") {
-    await runInterpreted("paleta", asset, imageKey);
+    await runInterpreted("paleta", asset, keys);
     return;
   }
   if (name === "componer_escena") {
@@ -103,7 +131,7 @@ export async function runCall(name: string, args: CallArgs, asset: Asset | undef
     const view = allowed.find((item) => item === args.view) ?? "perfil";
     const cooked = interpret(args.prompt || view, asset, desk.project);
     desk.setLastBrief(cooked);
-    await mintPlate(asset, view, imageKey, cooked.paint || args.prompt);
+    await mintPlate(asset, view, keys, cooked.paint || args.prompt);
   }
 }
 
@@ -147,7 +175,7 @@ async function deriveTake(asset: Asset, view: ViewName, source: Take) {
   desk.pushTrace({ role: "tool", tool: "derivar", text: `${VIEW_LABEL[view]} de ${asset.name} sale de ${source.label}. Coste 0.`, cost: 0 });
 }
 
-export async function mintPlate(asset: Asset, view: ViewName, imageKey: string, prompt?: string) {
+export async function mintPlate(asset: Asset, view: ViewName, keys: DeskKeys, prompt?: string) {
   const desk = useDesk.getState();
   const target =
     view === "fondo"
@@ -167,8 +195,19 @@ export async function mintPlate(asset: Asset, view: ViewName, imageKey: string, 
     return;
   }
 
-  if (!imageKey && target.takes.length > 0 && target.kind !== "fondo") {
-    desk.pushTrace({ role: "director", text: `${target.name} ya tiene cara. El pincel gratis no inventa una prima.` });
+  if (keys.brush === "off") {
+    desk.pushTrace({
+      role: "director",
+      text: `${target.name} no tiene ${VIEW_LABEL[view]}. El pincel gratis está apagado a propósito. Sube un boceto o pon xAI en Ajustes.`,
+    });
+    return;
+  }
+  if (keys.brush === "xai" && !keys.image) {
+    desk.pushTrace({ role: "director", text: "Elegiste xAI y falta la clave." });
+    return;
+  }
+  if (keys.brush === "trial" && target.takes.length > 0 && target.kind !== "fondo") {
+    desk.pushTrace({ role: "director", text: `${target.name} ya tiene cara. El pincel de prueba no inventa una prima.` });
     return;
   }
 
@@ -185,8 +224,10 @@ export async function mintPlate(asset: Asset, view: ViewName, imageKey: string, 
     (view === "fondo"
       ? `Fondo ${target.name}. ${target.spec.notes}. Sin personas.`
       : `El mismo personaje. ${costume}. ${target.spec.role} Vista ${VIEW_LABEL[view]}.`);
-  desk.pushTrace({ role: "director", text: `Pincel: ${VIEW_LABEL[view]} de ${target.name}.` });
-  const result = await generarLamina({ data: { prompt: text, view, reference, imageKey } });
+  desk.pushTrace({ role: "director", text: `Pincel ${keys.brush}: ${VIEW_LABEL[view]} de ${target.name}.` });
+  const result = await generarLamina({
+    data: { prompt: text, view, reference, imageKey: keys.brush === "xai" ? keys.image : "" },
+  });
   if (!result.ok) {
     desk.pushTrace({ role: "director", text: result.error });
     throw new Error(result.error);
