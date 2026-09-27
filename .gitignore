@@ -11,3 +11,5 @@ screenshots
 artifacts
 *.log
 .DS_Store
+scripts/_*.txt
+scripts/_*.err
