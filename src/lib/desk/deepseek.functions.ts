@@ -7,6 +7,8 @@ export type CallArgs = {
   never: string[];
   view: string;
   prompt: string;
+  kind: string;
+  name: string;
   x: number | null;
   y: number | null;
   scale: number | null;
@@ -33,6 +35,8 @@ function readArgs(raw: unknown): CallArgs {
     never,
     view: str("view"),
     prompt: str("prompt"),
+    kind: str("kind"),
+    name: str("name"),
     x: num("x"),
     y: num("y"),
     scale: num("scale"),
@@ -44,7 +48,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "ficha",
-      description: "Actualiza la ficha del personaje o lugar abierto. No genera píxeles. Cuesta 0.",
+      description: "Actualiza la ficha del activo del chat abierto. No genera píxeles. Cuesta 0.",
       parameters: {
         type: "object",
         properties: {
@@ -60,9 +64,36 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "crear_activo",
+      description: "Abre un personaje o lugar nuevo con su propio chat. No pinta. Cuesta 0.",
+      parameters: {
+        type: "object",
+        properties: {
+          kind: { type: "string", enum: ["personaje", "fondo"] },
+          name: { type: "string" },
+          costume: { type: "string" },
+          role: { type: "string" },
+          notes: { type: "string" },
+          never: { type: "array", items: { type: "string" } },
+        },
+        required: ["kind", "name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "fijar",
+      description: "Fija la toma activa del chat abierto. Cuesta 0.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "generar_lamina",
       description:
-        "Pide UNA lámina nueva al motor de imagen (Grok). Cuesta 1. Úsala solo si el usuario pidió un dibujo que no existe. Máximo una por respuesta. Un escenario nuevo es view fondo, sin personas.",
+        "Pide UNA lámina nueva. Último recurso. Cuesta 1. Máximo una por respuesta. Si ya hay cara, no la uses.",
       parameters: {
         type: "object",
         properties: {
@@ -70,10 +101,7 @@ const TOOLS = [
             type: "string",
             enum: ["frente", "perfil", "tres_cuartos", "espalda", "expresion", "fondo"],
           },
-          prompt: {
-            type: "string",
-            description: "Instrucción concreta: misma ropa o mismo lugar, mismos colores, qué cambia. Sin texto en la imagen. Fondo: sin personajes.",
-          },
+          prompt: { type: "string" },
         },
         required: ["view", "prompt"],
       },
@@ -83,13 +111,13 @@ const TOOLS = [
     type: "function",
     function: {
       name: "componer_escena",
-      description: "Mueve el personaje ya dibujado sobre el fondo ya dibujado. Cuesta 0. No inventa píxeles.",
+      description: "Mueve el personaje ya dibujado sobre el fondo ya dibujado. Cuesta 0.",
       parameters: {
         type: "object",
         properties: {
-          x: { type: "number", description: "0 a 1 desde la izquierda" },
-          y: { type: "number", description: "0 a 1 desde arriba" },
-          scale: { type: "number", description: "altura relativa, 0.3 a 0.9" },
+          x: { type: "number" },
+          y: { type: "number" },
+          scale: { type: "number" },
         },
         required: ["x", "y", "scale"],
       },
@@ -108,15 +136,14 @@ const TOOLS = [
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const SYSTEM =
-  "Eres el director de un estudio 2D. Hablas español, corto. Por defecto OBEDECES: no propones planos ni historia salvo que te lo pidan. " +
-  "No regeneres una película ni a Lina ni el Estero norte sólo para probar. Las láminas aprobadas se reutilizan. " +
-  "Un escenario o lugar nuevo: ficha breve (notes + never) y UNA generar_lamina con view fondo, sin personas, sin texto. " +
-  "componer_escena, paleta y ficha cuestan 0. generar_lamina cuesta 1 y solo una por respuesta. " +
-  "Si hay imagen adjunta, mírala antes de decidir. No describas un dibujo que no vas a pedir.";
+  "Eres el director de un estudio 2D. Dentro de ti hay tres oficios: fichista (escribe ley), archivo (no olvida el canon del corto) y prensa (reusa, deriva, y solo entonces pinta). " +
+  "Hablas español, corto. Este chat es de UN activo; el brief lista el resto del corto. No mezcles a Lina con un personaje nuevo. " +
+  "No regeneres una película. generar_lamina cuesta 1 y solo una por respuesta. crear_activo, ficha, fijar, paleta y componer_escena cuestan 0. " +
+  "Si hay imagen adjunta, mírala. No describas un dibujo que no vas a pedir.";
 
 export const dirigir = createServerFn({ method: "POST" })
   .validator((input: { apiKey?: string; brief: string; history: ChatMessage[]; imageDataUrl?: string }) => {
-    if (!input || typeof input.brief !== "string" || input.brief.length < 1 || input.brief.length > 2000) {
+    if (!input || typeof input.brief !== "string" || input.brief.length < 1 || input.brief.length > 4000) {
       throw new Error("Mensaje inválido");
     }
     const history = Array.isArray(input.history) ? input.history.slice(-8) : [];
@@ -133,7 +160,7 @@ export const dirigir = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }): Promise<DirectorResult> => {
     const apiKey = data.apiKey || process.env.DEEPSEEK_API_KEY || "";
-    if (!apiKey) return { ok: false, error: "Falta la clave de DeepSeek." };
+    if (!apiKey) return { ok: false, error: "Falta la clave de DeepSeek. El chat local sigue funcionando." };
     const userContent = data.imageDataUrl
       ? [
           { type: "text", text: data.brief },
@@ -183,5 +210,5 @@ export const dirigir = createServerFn({ method: "POST" })
       }
       return [{ name, args }];
     });
-    return { ok: true, text: message?.content?.trim() || "", calls: calls.slice(0, 2) };
+    return { ok: true, text: message?.content?.trim() || "", calls: calls.slice(0, 3) };
   });
