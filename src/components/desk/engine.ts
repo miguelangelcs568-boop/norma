@@ -1,9 +1,9 @@
 import { type CallArgs } from "@/lib/desk/deepseek.functions";
 import { getBlob, putBlob } from "@/lib/desk/idb";
 import { generarLamina } from "@/lib/desk/image.functions";
-import { dataUrlToBlob, extractPalette, shrinkSrc } from "@/lib/desk/images";
+import { dataUrlToBlob, extractPalette, flipSrc, shrinkSrc } from "@/lib/desk/images";
 import { activeSrc, nid, useDesk } from "@/lib/desk/store";
-import { VIEW_LABEL, type Asset, type ViewName } from "@/lib/desk/types";
+import { VIEW_LABEL, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
 const SHORT = ["fondo", "perfil", "frente", "espalda", "expresion", "expresión", "paleta", "escena", "tres cuartos"];
 
@@ -55,7 +55,6 @@ export async function runLocal(brief: string, asset: Asset | undefined, imageKey
     });
     return;
   }
-  pushTrace({ role: "director", text: `Pidiendo lámina: ${VIEW_LABEL[view]}. Espera.` });
   await mintPlate(asset, view, imageKey);
 }
 
@@ -103,6 +102,45 @@ export async function objectFromIdb(src: string): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
+function nearestTake(asset: Asset, view: ViewName): Take | undefined {
+  const prefer: ViewName[] =
+    view === "perfil" ? ["perfil", "frente", "tres_cuartos"] : view === "fondo" ? ["fondo"] : ["frente", "perfil", "boceto", "tres_cuartos", "expresion", "espalda"];
+  for (const name of prefer) {
+    const hit = asset.takes.find((take) => take.view === name);
+    if (hit) return hit;
+  }
+  return asset.takes[0];
+}
+
+async function deriveTake(asset: Asset, view: ViewName, source: Take) {
+  const desk = useDesk.getState();
+  const flip = view === "perfil" && source.view === "frente";
+  let src = source.src;
+  if (flip) {
+    const raw = await objectFromIdb(source.src);
+    const flipped = await flipSrc(raw);
+    const id = nid();
+    await putBlob(id, dataUrlToBlob(flipped));
+    if (source.src.startsWith("idb:")) URL.revokeObjectURL(raw);
+    src = `idb:${id}`;
+  }
+  desk.addTake(asset.id, {
+    id: `${view}-${nid()}`,
+    view,
+    label: `${VIEW_LABEL[view]} · desde ${source.label}`,
+    src,
+    locked: false,
+    cost: 0,
+    prompt: `derivado de ${source.view}`,
+  });
+  desk.pushTrace({
+    role: "tool",
+    tool: "derivar",
+    text: `${VIEW_LABEL[view]} de ${asset.name} sale de ${source.label}. Misma cara, coste 0. El pincel gratis no pinta otra persona.`,
+    cost: 0,
+  });
+}
+
 export async function mintPlate(asset: Asset, view: ViewName, imageKey: string, prompt?: string) {
   const desk = useDesk.getState();
   const target =
@@ -111,6 +149,29 @@ export async function mintPlate(asset: Asset, view: ViewName, imageKey: string, 
       : asset.kind === "personaje" || asset.kind === "prop"
         ? asset
         : (desk.project.assets.find((item) => item.kind === "personaje") ?? asset);
+
+  const source = nearestTake(target, view);
+  if (source && source.view !== view) {
+    await deriveTake(target, view, source);
+    return;
+  }
+  if (source && source.view === view) {
+    desk.setActiveTake(target.id, source.id);
+    desk.pushTrace({ role: "director", text: `${VIEW_LABEL[view]} ya existe en ${target.name}.` });
+    return;
+  }
+
+  if (!imageKey) {
+    desk.pushTrace({
+      role: "director",
+      text:
+        target.kind === "fondo"
+          ? "No hay fondo todavía. Súbelo con Subir. El pincel gratis inventa un lugar que no es Punta Palma."
+          : `No hay lámina de ${target.name}. Sube un boceto. El pincel gratis inventa otra cara y no sirve para este corto.`,
+    });
+    return;
+  }
+
   const current = activeSrc(target);
   let reference: string | undefined;
   if (current) {
@@ -124,6 +185,7 @@ export async function mintPlate(asset: Asset, view: ViewName, imageKey: string, 
     (view === "fondo"
       ? `Fondo de animación, lugar ${target.name}. ${target.spec.notes}. Sin personas, sin texto.`
       : `El mismo personaje. ${costume}. Vista ${VIEW_LABEL[view]}. No cambies la ropa ni la paleta. Cuerpo entero salvo que la vista sea expresión.`);
+  desk.pushTrace({ role: "director", text: `Pincel fino: ${VIEW_LABEL[view]}.` });
   const result = await generarLamina({ data: { prompt: text, view, reference, imageKey } });
   if (!result.ok) {
     desk.pushTrace({ role: "director", text: result.error });

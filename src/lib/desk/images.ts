@@ -29,6 +29,19 @@ export async function shrinkSrc(src: string, max = 768): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
+export async function flipSrc(src: string): Promise<string> {
+  const image = await loadImage(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Sin lienzo");
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(image, 0, 0);
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+
 export async function extractPalette(src: string, count = 5): Promise<string[]> {
   const image = await loadImage(src);
   const canvas = document.createElement("canvas");
