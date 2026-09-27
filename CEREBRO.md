@@ -23,8 +23,11 @@ Se guardan semilla, escala y decisiones. Los píxeles se derivan. Una lámina ya
 
 - GitHub: `miguelangelcs568-boop/norma` (público, rama `main`).
 - Cuenta: `miguelangelcs568-boop`. Correo: `miguelangelcs568@gmail.com`.
-- El usuario trabaja en **Windows** con `cmd`, no PowerShell. Yo (Grok) no escribo en su PC. El puente es este repo + `scripts/seguir-github.bat`.
-- Dev: `http://localhost:8080`. Script: `npm run dev` (Vite directo en Windows).
+- El usuario trabaja en **Windows** con `cmd`, no PowerShell. Yo (Grok) no escribo en su PC.
+- El puente es este repo. Miguel arranca `vivo.bat`: escritorio + espejo (`scripts/seguir-github.bat`) que cada 5 s hace `git fetch` y `git reset --hard origin/main`.
+- Dev: `http://localhost:8080`. Vite con polling, para que un reset de git recargue solo.
+- `.env` no está en git. El estado del corto en el navegador es `localStorage`. El espejo no los pisa.
+- No editar código en el PC de Miguel: el espejo lo pisa. El código se cambia aquí, en GitHub.
 
 ## Stack (no reinventar)
 
@@ -46,7 +49,7 @@ Se guardan semilla, escala y decisiones. Los píxeles se derivan. Una lámina ya
 | Claves en el navegador | `src/lib/desk/keys.ts` |
 | IndexedDB auxiliar | `src/lib/desk/idb.ts` |
 | Láminas de muestra | `public/desk/` |
-| Arranque local | `README.md`, `abrir.bat`, `scripts/seguir-github.bat` |
+| Arranque local en vivo | `vivo.bat`, `abrir.bat`, `scripts/seguir-github.bat` |
 
 No copies el escritorio a otra carpeta. No crees un segundo store.
 
@@ -89,7 +92,7 @@ Faltan (no las inventes en silencio): tres cuartos, espalda, expresión, más pl
 2. Un cambio = una superficie. No reescribas Desk + DeepSeek + Vite «a la vez» salvo que el usuario lo pida.
 3. El recorte de papel es local (canvas). Componer y exportar PNG cuestan 0. No pidas una imagen nueva para mover a Lina.
 4. Habla con Miguel en español, producto primero. No le pidas que depure tu sandbox.
-5. En Windows: `cmd`, `npm run dev`, segunda ventana `scripts\seguir-github.bat`. Si tocas `package.json`, avísa: hay que `npm install` otra vez.
+5. En Windows el ensayo es `vivo.bat`. Si tocas `package.json`, avisa: hay que `npm install` y volver a abrir `vivo.bat`.
 6. No borres láminas de `public/desk/` sin reemplazo.
 7. No conviertas NORMA en un chat genérico ni en un generador de clips de vídeo.
 
