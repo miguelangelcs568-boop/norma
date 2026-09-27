@@ -43,6 +43,14 @@ export type Scene = {
   layers: SceneLayer[];
 };
 
+export type Trace = {
+  id: string;
+  role: "user" | "director" | "tool";
+  text: string;
+  tool?: string;
+  cost?: number;
+};
+
 export type Asset = {
   id: string;
   kind: AssetKind;
@@ -51,14 +59,7 @@ export type Asset = {
   takes: Take[];
   activeTakeId: string | null;
   scene?: Scene;
-};
-
-export type Trace = {
-  id: string;
-  role: "user" | "director" | "tool";
-  text: string;
-  tool?: string;
-  cost?: number;
+  thread: Trace[];
 };
 
 export type DeskProject = {
@@ -68,6 +69,8 @@ export type DeskProject = {
   platesSpent: number;
   trace: Trace[];
 };
+
+export type Brush = "off" | "trial" | "xai";
 
 export const VIEW_LABEL: Record<ViewName, string> = {
   boceto: "Boceto",
@@ -92,6 +95,12 @@ export function missingViews(asset: Asset): ViewName[] {
   return viewsFor(asset.kind).filter((view) => !have.has(view));
 }
 
+export function roomOf(project: DeskProject, asset: Asset | undefined): Trace[] {
+  if (!asset) return project.trace;
+  if (asset.thread && asset.thread.length > 0) return asset.thread;
+  return project.trace;
+}
+
 export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
     return `${asset.name}: arrastra sobre el fondo. Mover cuesta 0.`;
@@ -100,5 +109,5 @@ export function briefFor(asset: Asset): string {
   if (miss.length === 0) {
     return `${asset.name} cubierto. Lo que pidas se reusa o se deriva.`;
   }
-  return `${asset.name}. Falta ${miss.map((view) => VIEW_LABEL[view]).join(", ")}. Una frase en Orden basta.`;
+  return `${asset.name}. Falta ${miss.map((view) => VIEW_LABEL[view]).join(", ")}. Una frase en este chat basta.`;
 }
