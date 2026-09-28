@@ -10,7 +10,6 @@ import { activeSrc, emptySpec, nid, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 import { requestWalk } from "@/lib/desk/walk-bus";
 
-/** Solo órdenes de mesa. Lo demás, si hay clave, lo habla DeepSeek. */
 export function isLocalOrder(said: string, intent: Brief["intent"]) {
   const text = said.trim().toLowerCase();
   if (intent === "caminar") return true;
@@ -96,8 +95,9 @@ async function enact(brief: Brief, asset: Asset | undefined, keys: DeskKeys) {
       thread: [{ id: nid(), role: "director", text: brief.spoken }],
     };
     desk.addAsset(created);
-    if (brief.view && keys.brush !== "off") await mintPlate(created, brief.view, keys, brief.paint);
-    else desk.pushTrace({ role: "director", text: "Ficha lista. Sube un boceto o enciende un pincel en Ajustes." });
+    if (brief.view) {
+      await mintPlate(created, brief.view, keys, brief.paint);
+    }
     return;
   }
   if (brief.intent === "vista" && asset && brief.view) {
@@ -143,6 +143,7 @@ export async function runCall(name: string, args: CallArgs, asset: Asset | undef
     };
     desk.addAsset(created);
     desk.pushTrace({ role: "tool", tool: "crear_activo", text: created.name, cost: 0 });
+    await mintPlate(created, kind === "fondo" ? "fondo" : "frente", keys, args.prompt || args.notes || created.name);
     return;
   }
   if (!asset) return;
@@ -244,18 +245,21 @@ export async function mintPlate(asset: Asset, view: ViewName, keys: DeskKeys, pr
     return;
   }
 
-  if (keys.brush === "off") {
+  const first = target.takes.length === 0;
+  const brush = keys.brush === "off" && first ? "trial" : keys.brush;
+
+  if (brush === "off") {
     desk.pushTrace({
       role: "director",
-      text: `${target.name} no tiene ${VIEW_LABEL[view]}. El pincel gratis está apagado a propósito. Sube un boceto o pon xAI en Ajustes.`,
+      text: `${target.name} no tiene ${VIEW_LABEL[view]}. Sube un boceto o pide la primera lámina otra vez.`,
     });
     return;
   }
-  if (keys.brush === "xai" && !keys.image) {
+  if (brush === "xai" && !keys.image) {
     desk.pushTrace({ role: "director", text: "Elegiste xAI y falta la clave." });
     return;
   }
-  if (keys.brush === "trial" && target.takes.length > 0 && target.kind !== "fondo") {
+  if (brush === "trial" && !first && target.kind !== "fondo") {
     desk.pushTrace({ role: "director", text: `${target.name} ya tiene cara. El pincel de prueba no inventa una prima.` });
     return;
   }
@@ -273,9 +277,9 @@ export async function mintPlate(asset: Asset, view: ViewName, keys: DeskKeys, pr
     (view === "fondo"
       ? `Fondo ${target.name}. ${target.spec.notes}. Sin personas.`
       : `El mismo personaje. ${costume}. ${target.spec.role} Vista ${VIEW_LABEL[view]}.`);
-  desk.pushTrace({ role: "director", text: `Pincel ${keys.brush}: ${VIEW_LABEL[view]} de ${target.name}.` });
+  desk.pushTrace({ role: "director", text: `Pintando ${VIEW_LABEL[view]} de ${target.name}…` });
   const result = await generarLamina({
-    data: { prompt: text, view, reference, imageKey: keys.brush === "xai" ? keys.image : "" },
+    data: { prompt: text, view, reference, imageKey: brush === "xai" ? keys.image : "" },
   });
   if (!result.ok) {
     desk.pushTrace({ role: "director", text: result.error });
