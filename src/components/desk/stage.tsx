@@ -32,84 +32,81 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
     }
   }
 
+  if (asset.kind === "escena") {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <SceneBoard asset={asset} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-sheet/50 px-4 py-2">
+      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
         <input
           value={asset.name}
           onChange={(event) => rename(asset.id, event.target.value)}
-          className="h-10 min-w-0 flex-1 bg-transparent font-sans text-[22px] font-semibold tracking-tight text-ink outline-none"
+          className="h-8 min-w-0 flex-1 bg-transparent text-[14px] font-medium tracking-tight text-ink outline-none"
         />
-        <span className="rounded-full bg-fill px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted uppercase">{asset.kind}</span>
       </div>
-      {asset.kind === "escena" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <SceneBoard asset={asset} />
+      {slots.length > 0 && (
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-line px-2 py-1.5">
+          {slots.map((view) => {
+            const take = asset.takes.find((item) => item.view === view);
+            const on = take && take.id === asset.activeTakeId;
+            return (
+              <button
+                key={view}
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => {
+                  if (take) setActiveTake(asset.id, take.id);
+                  else void run(view);
+                }}
+                className={`h-14 w-16 shrink-0 overflow-hidden rounded-lg border text-left ${on ? "border-ink" : "border-line"} ${take ? "bg-sheet" : "border-dashed bg-fill/40"}`}
+              >
+                {take ? (
+                  <SlotThumb take={take} />
+                ) : (
+                  <span className="flex h-full flex-col justify-between p-1.5 text-[10px] leading-tight text-muted">
+                    <span>{VIEW_LABEL[view]}</span>
+                    <span>{busy === view ? "…" : "Pedir"}</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <>
-          {slots.length > 0 && (
-            <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-line px-4 py-2">
-              {slots.map((view) => {
-                const take = asset.takes.find((item) => item.view === view);
-                const on = take && take.id === asset.activeTakeId;
-                return (
-                  <button
-                    key={view}
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => {
-                      if (take) setActiveTake(asset.id, take.id);
-                      else void run(view);
-                    }}
-                    className={`h-16 w-24 shrink-0 overflow-hidden rounded-2xl border text-left ${on ? "border-ink" : "border-line"} ${take ? "bg-sheet" : "border-dashed bg-fill/40"}`}
-                  >
-                    {take ? (
-                      <SlotThumb take={take} />
-                    ) : (
-                      <span className="flex h-full flex-col justify-between p-2 text-[11px] leading-tight text-muted">
-                        <span>{VIEW_LABEL[view]}</span>
-                        <span>{busy === view ? "Pidiendo" : "Pedir"}</span>
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="grid place-items-center bg-vellum p-6">
-              {board === "hoja" && asset.kind === "personaje" ? (
-                <ModelSheet asset={asset} />
-              ) : url ? (
-                <div className="relative inline-block">
-                  <img src={url} alt={asset.name} className="max-h-[min(20rem,42vh)] w-auto object-contain" />
-                  {guide && asset.kind === "personaje" && <HeadGuide />}
-                </div>
-              ) : (
-                <p className="max-w-sm text-center text-[13px] text-muted">
-                  {miss.length > 0
-                    ? `Mesa vacía. Sube un boceto o pide ${VIEW_LABEL[miss[0]]} si hay pincel.`
-                    : "Mesa vacía. Sube un boceto."}
-                </p>
-              )}
-            </div>
-            {asset.kind === "personaje" && <Ficha asset={asset} />}
-          </div>
-          <ToolRow
-            asset={asset}
-            busy={busy}
-            armed={armed}
-            board={board}
-            guide={guide}
-            onBoard={setBoard}
-            onGuide={setGuide}
-            onArm={setArmed}
-            onRun={(view) => void run(view)}
-          />
-        </>
       )}
-      {error && <p className="shrink-0 px-4 py-2 text-[12px] text-accent">{error}</p>}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="grid place-items-center bg-vellum p-4">
+          {board === "hoja" && asset.kind === "personaje" ? (
+            <ModelSheet asset={asset} />
+          ) : url ? (
+            <div className="relative inline-block">
+              <img src={url} alt={asset.name} className="max-h-48 w-auto object-contain" />
+              {guide && asset.kind === "personaje" && <HeadGuide />}
+            </div>
+          ) : (
+            <p className="max-w-xs text-center text-[12px] text-muted">
+              {miss.length > 0 ? `Sube un boceto o pide ${VIEW_LABEL[miss[0]]}.` : "Sube un boceto."}
+            </p>
+          )}
+        </div>
+        {asset.kind === "personaje" && <Ficha asset={asset} />}
+      </div>
+      <ToolRow
+        asset={asset}
+        busy={busy}
+        armed={armed}
+        board={board}
+        guide={guide}
+        onBoard={setBoard}
+        onGuide={setGuide}
+        onArm={setArmed}
+        onRun={(view) => void run(view)}
+      />
+      {error && <p className="shrink-0 px-3 py-1 text-[12px] text-accent">{error}</p>}
     </div>
   );
 }
@@ -119,7 +116,7 @@ function SlotThumb({ take }: { take: Take }) {
   return (
     <span className="relative block h-full w-full">
       {url ? <img src={url} alt={take.label} className="h-full w-full object-cover" /> : null}
-      <span className="absolute inset-x-0 bottom-0 bg-sheet/80 px-1.5 py-0.5 text-[10px] text-muted">{take.label}</span>
+      <span className="absolute inset-x-0 bottom-0 bg-sheet/80 px-1 text-[9px] text-muted">{take.label}</span>
     </span>
   );
 }
@@ -136,11 +133,10 @@ function HeadGuide() {
 
 function ModelSheet({ asset }: { asset: Asset }) {
   return (
-    <div className="flex w-full items-end gap-3 overflow-x-auto">
+    <div className="flex w-full items-end gap-2 overflow-x-auto">
       {asset.takes.map((take) => (
         <SheetTake key={take.id} take={take} />
       ))}
-      {asset.takes.length === 0 && <p className="text-[13px] text-muted">La hoja se llena con las vistas que fijes.</p>}
     </div>
   );
 }
@@ -148,9 +144,9 @@ function ModelSheet({ asset }: { asset: Asset }) {
 function SheetTake({ take }: { take: Take }) {
   const url = useResolvedSrc(take.src);
   return (
-    <figure className="w-36 shrink-0">
-      {url ? <img src={url} alt={take.label} className="h-56 w-full object-contain object-bottom" /> : null}
-      <figcaption className="mt-1 text-center text-[12px] text-muted">{take.label}</figcaption>
+    <figure className="w-24 shrink-0">
+      {url ? <img src={url} alt={take.label} className="h-36 w-full object-contain object-bottom" /> : null}
+      <figcaption className="mt-1 text-center text-[10px] text-muted">{take.label}</figcaption>
     </figure>
   );
 }
@@ -159,32 +155,23 @@ function Ficha({ asset }: { asset: Asset }) {
   const patchSpec = useDesk((s) => s.patchSpec);
   const spec = asset.spec;
   return (
-    <div className="grid gap-3 border-t border-line bg-sheet/40 p-4 md:grid-cols-2">
-      <label className="text-[12px] text-muted">
+    <div className="grid gap-2 border-t border-line p-3">
+      <label className="text-[11px] text-muted">
         Oficio
         <textarea
           value={spec.role}
           onChange={(event) => patchSpec(asset.id, { role: event.target.value.slice(0, 240) })}
-          className="mt-1.5 h-20 w-full rounded-xl border border-line bg-sheet p-2.5 text-[13px] text-ink outline-none focus:border-accent"
+          className="mt-1 h-16 w-full rounded-lg border border-line bg-sheet p-2 text-[12px] text-ink outline-none"
         />
       </label>
-      <label className="text-[12px] text-muted">
-        Vestuario que no se negocia
+      <label className="text-[11px] text-muted">
+        Vestuario
         <textarea
           value={spec.costume}
           onChange={(event) => patchSpec(asset.id, { costume: event.target.value.slice(0, 320) })}
-          className="mt-1.5 h-20 w-full rounded-xl border border-line bg-sheet p-2.5 text-[13px] text-ink outline-none focus:border-accent"
+          className="mt-1 h-16 w-full rounded-lg border border-line bg-sheet p-2 text-[12px] text-ink outline-none"
         />
       </label>
-      <div className="flex flex-wrap gap-2 md:col-span-2">
-        {spec.palette.map((hex) => (
-          <span key={hex} className="flex items-center gap-2 font-mono text-[11px]">
-            <span className="size-7 rounded-full border border-line" style={{ backgroundColor: hex }} />
-            {hex}
-          </span>
-        ))}
-        {spec.palette.length === 0 && <span className="text-[12px] text-muted">Sin paleta. Extráela de la lámina.</span>}
-      </div>
     </div>
   );
 }
