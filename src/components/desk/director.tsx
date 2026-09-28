@@ -110,6 +110,12 @@ export function Director({
     }
   }
 
+  const emptyHint = !project.assets.length
+    ? "Mesa vacía. Dile el título, un personaje o un lugar. Como en una conversación."
+    : scope === "general"
+      ? "Dile al corto lo que tiene que pasar."
+      : `Notas de ${asset?.name ?? "esto"}.`;
+
   return (
     <aside className="flex h-full min-h-0 flex-col bg-sheet">
       {hub && (
@@ -127,11 +133,7 @@ export function Director({
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        {thread.length === 0 && (
-          <p className="pt-8 text-center text-[13px] text-muted">
-            {scope === "general" ? "Dile al corto lo que tiene que pasar." : `Notas de ${asset?.name ?? "esto"}.`}
-          </p>
-        )}
+        {thread.length === 0 && <p className="pt-8 text-center text-[13px] text-muted">{emptyHint}</p>}
         {thread.map((item) => {
           if (item.role === "tool") {
             return (

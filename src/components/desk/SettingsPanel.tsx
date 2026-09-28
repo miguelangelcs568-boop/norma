@@ -10,6 +10,8 @@ export function SettingsPanel({
   onChange,
   onSave,
   onClose,
+  onBlank,
+  onDemo,
 }: {
   keys: DeskKeys;
   theme: Theme;
@@ -17,6 +19,8 @@ export function SettingsPanel({
   onChange: (keys: DeskKeys) => void;
   onSave: () => void;
   onClose: () => void;
+  onBlank?: () => void;
+  onDemo?: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
@@ -56,6 +60,17 @@ export function SettingsPanel({
                 <Moon className="size-3.5" /> Oscuro
               </button>
             </div>
+          </section>
+          <section className="grid gap-2">
+            <p className="text-[12px] font-medium text-muted">Corto</p>
+            <button type="button" onClick={onBlank} className="rounded-2xl border border-line px-3 py-2 text-left">
+              <span className="block text-[13px] font-medium text-ink">Proyecto nuevo</span>
+              <span className="block text-[12px] text-muted">Mesa vacía. Sin Lina, sin estero, sin láminas.</span>
+            </button>
+            <button type="button" onClick={onDemo} className="rounded-2xl border border-line px-3 py-2 text-left">
+              <span className="block text-[13px] font-medium text-ink">Volver a Punta Palma</span>
+              <span className="block text-[12px] text-muted">El corto de muestra. No pisa un archivo guardado.</span>
+            </button>
           </section>
           <section className="grid gap-2">
             <p className="text-[12px] font-medium text-muted">Pincel</p>

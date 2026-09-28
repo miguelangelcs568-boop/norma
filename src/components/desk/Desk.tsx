@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { FolderOpen, HardDrive, MessageSquare, Moon, Settings, Sun } from "lucide-react";
+import { FilePlus, FolderOpen, HardDrive, MessageSquare, Moon, Settings, Sun } from "lucide-react";
 import { Director } from "@/components/desk/director";
 import { Dock, SidePanel, type DrawerKind } from "@/components/desk/drawers";
 import { SettingsPanel } from "@/components/desk/SettingsPanel";
@@ -14,6 +14,9 @@ export function Desk() {
   const project = useDesk((s) => s.project);
   const select = useDesk((s) => s.select);
   const loadProject = useDesk((s) => s.loadProject);
+  const newBlank = useDesk((s) => s.newBlank);
+  const resetDemo = useDesk((s) => s.resetDemo);
+  const setTitle = useDesk((s) => s.setTitle);
   const viewer =
     project.assets.find((item) => item.kind === "escena" && item.id === project.selectedId) ??
     project.assets.find((item) => item.kind === "escena") ??
@@ -61,6 +64,29 @@ export function Desk() {
     }
   }
 
+  async function startBlank() {
+    const current = useDesk.getState().project;
+    const dirty = current.assets.length > 0 || (current.title && current.title !== "Sin título");
+    if (dirty) {
+      const saveFirst = window.confirm("¿Guardar el corto actual en el PC antes de abrir uno vacío?");
+      if (saveFirst) await packProject(current).then(downloadPack);
+      const ok = window.confirm("La mesa queda sin láminas ni personajes. Punta Palma sigue en Abrir y en Ajustes. ¿Abrir vacío?");
+      if (!ok) return;
+    }
+    newBlank();
+    setTalkId("general");
+    setDrawer(null);
+    setDrawerId(null);
+  }
+
+  function restoreDemo() {
+    const ok = window.confirm("¿Volver al corto de muestra La sal de Punta Palma? Lo de ahora se puede guardar antes con el disco.");
+    if (!ok) return;
+    resetDemo();
+    setTalkId("general");
+    setDrawer(null);
+  }
+
   if (!ready) {
     return <div className="grid h-dvh place-items-center bg-vellum text-[15px] text-muted">Abriendo…</div>;
   }
@@ -68,7 +94,12 @@ export function Desk() {
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-vellum text-ink">
       <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-line bg-sheet/80 px-3 backdrop-blur">
-        <p className="truncate text-[15px] font-semibold tracking-tight">{project.title}</p>
+        <input
+          value={project.title}
+          onChange={(event) => setTitle(event.target.value)}
+          aria-label="Título del corto"
+          className="min-w-0 flex-1 truncate bg-transparent text-[15px] font-semibold tracking-tight text-ink outline-none"
+        />
         <div className="flex items-center gap-0.5">
           <input
             ref={fileRef}
@@ -81,6 +112,9 @@ export function Desk() {
               if (file) void readPackFile(file).then(loadProject);
             }}
           />
+          <IconBtn label="Proyecto nuevo" onClick={() => void startBlank()}>
+            <FilePlus className="size-4" strokeWidth={1.6} />
+          </IconBtn>
           <IconBtn label="Guardar" onClick={() => void packProject(project).then(downloadPack)}>
             <HardDrive className="size-4" strokeWidth={1.6} />
           </IconBtn>
@@ -105,6 +139,14 @@ export function Desk() {
           onTheme={chooseTheme}
           onChange={setKeys}
           onClose={() => setSettings(false)}
+          onBlank={() => {
+            setSettings(false);
+            void startBlank();
+          }}
+          onDemo={() => {
+            setSettings(false);
+            restoreDemo();
+          }}
           onSave={() => {
             saveKeys(keys);
             savePrefs({ theme });
@@ -116,7 +158,19 @@ export function Desk() {
         <Dock open={drawer} chatOpen={chatOpen} onOpen={openDrawer} onChat={() => setChatOpen((value) => !value)} />
         {drawer && <SidePanel kind={drawer} keys={keys} pickedId={drawerId} onPick={pick} onClose={() => setDrawer(null)} />}
         <main className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${chatOpen ? "max-md:hidden" : "flex"} md:flex`}>
-          {viewer ? <Stage asset={viewer} keys={keys} /> : null}
+          {viewer ? (
+            <Stage asset={viewer} keys={keys} />
+          ) : (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="flex min-h-0 flex-1 items-center justify-center bg-well p-6">
+                <div className="relative aspect-video w-full max-h-full max-w-[min(100%,calc(100dvh-8rem))] overflow-hidden rounded-sm bg-black shadow-sheet">
+                  <p className="absolute inset-0 grid place-items-center px-8 text-center text-[14px] leading-relaxed text-white/55">
+                    Mesa vacía. En el chat dile el título y el primer personaje. Nada se pinta hasta que lo pidas.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
         {chatOpen && (
           <div className="flex h-full min-h-0 w-full min-w-0 flex-col border-l border-line md:w-[var(--space-chat)] md:shrink-0">
