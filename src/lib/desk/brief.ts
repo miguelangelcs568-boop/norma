@@ -194,7 +194,7 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   }
 
   if (asset) {
-    return { ...empty, spoken: asset.kind === "escena" ? "Di una acción o que camine." : `Sigo en ${asset.name}. Dime."` };
+    return { ...empty, spoken: asset.kind === "escena" ? "Di una acción o que camine." : `Sigo en ${asset.name}. Dime.` };
   }
   if (!project?.assets.length) {
     return { ...empty, spoken: "Mesa vacía. Dime el título, un personaje o un lugar. Nada se pinta hasta que lo pidas." };

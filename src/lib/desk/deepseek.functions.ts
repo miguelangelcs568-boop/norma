@@ -91,6 +91,26 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "partitura",
+      description: "Parte una frase de acción en poses del plano. Reusa láminas. Cuesta 0.",
+      parameters: {
+        type: "object",
+        properties: { prompt: { type: "string" }, notes: { type: "string" } },
+        required: ["prompt"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "andar",
+      description: "Hace andar al personaje unos segundos sobre el plano. No pinta. Cuesta 0.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "generar_lamina",
       description:
         "Pide UNA lámina nueva. Último recurso. Cuesta 1. Máximo una por respuesta. Si ya hay cara, no la uses.",
@@ -136,17 +156,18 @@ const TOOLS = [
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const SYSTEM =
-  "Eres el director de un estudio 2D. Dentro de ti hay tres oficios: fichista (escribe ley), archivo (no olvida el canon del corto) y prensa (reusa, deriva, y solo entonces pinta). " +
-  "Hablas español, corto. Este chat es de UN activo; el brief lista el resto del corto. No mezcles a Lina con un personaje nuevo. " +
-  "No regeneres una película. generar_lamina cuesta 1 y solo una por respuesta. crear_activo, ficha, fijar, paleta y componer_escena cuestan 0. " +
+  "Eres el director de NORMA, un estudio 2D. Hablas con Miguel en español, como un colega de mesa: natural, breve, sin plantillas. " +
+  "Recuerdas el canon del brief. Si el corto está vacío, no inventes Punta Palma ni Lina. Si dudas, pregunta. " +
+  "Tres oficios: fichista (escribe ley), archivo (no olvida) y prensa (reusa, deriva, y solo entonces pinta). " +
+  "No regeneres una película. generar_lamina cuesta 1 y solo una por respuesta. Lo demás cuesta 0. " +
   "Si hay imagen adjunta, mírala. No describas un dibujo que no vas a pedir.";
 
 export const dirigir = createServerFn({ method: "POST" })
   .validator((input: { apiKey?: string; brief: string; history: ChatMessage[]; imageDataUrl?: string }) => {
-    if (!input || typeof input.brief !== "string" || input.brief.length < 1 || input.brief.length > 4000) {
+    if (!input || typeof input.brief !== "string" || input.brief.length < 1 || input.brief.length > 12000) {
       throw new Error("Mensaje inválido");
     }
-    const history = Array.isArray(input.history) ? input.history.slice(-8) : [];
+    const history = Array.isArray(input.history) ? input.history.slice(-20) : [];
     for (const message of history) {
       if (message.role !== "user" && message.role !== "assistant") throw new Error("Historial inválido");
       if (typeof message.content !== "string" || message.content.length > 2000) throw new Error("Historial inválido");
@@ -175,8 +196,8 @@ export const dirigir = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "deepseek-flash",
-        max_tokens: 700,
-        temperature: 0.2,
+        max_tokens: 900,
+        temperature: 0.55,
         messages: [
           { role: "system", content: SYSTEM },
           ...data.history.map((message) => ({ role: message.role, content: message.content })),
