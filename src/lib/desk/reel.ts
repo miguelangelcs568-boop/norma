@@ -41,7 +41,8 @@ export function nextShotName(project: DeskProject): string {
 }
 
 export function mintShot(project: DeskProject, from?: Asset): Asset {
-  const prev = from ?? shotsOf(project)[shotsOf(project).length - 1];
+  const list = shotsOf(project);
+  const prev = from ?? list[list.length - 1];
   const person = project.assets.find((item) => item.kind === "personaje");
   const take = person?.takes.find((item) => item.view === "frente") ?? person?.takes[0];
   const name = nextShotName(project);
@@ -69,9 +70,12 @@ export function mintShot(project: DeskProject, from?: Asset): Asset {
   };
 }
 
-export function appendReel(project: DeskProject, id: string): string[] {
-  const base = shotsOf(project).map((item) => item.id);
-  return base.includes(id) ? base : [...base, id];
+export function openNextShot(from?: Asset) {
+  const desk = useDesk.getState();
+  const shot = mintShot(desk.project, from);
+  desk.addAsset(shot);
+  desk.pushTrace({ role: "tool", tool: "plano", text: `${shot.name} entra al rollo. 0 láminas.`, cost: 0 });
+  return shot;
 }
 
 export async function playShot(sceneId: string, stopped: () => boolean) {
