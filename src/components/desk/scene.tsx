@@ -5,13 +5,15 @@ import { objectFromIdb } from "@/components/desk/engine";
 import { useCutout, useResolvedSrc } from "@/components/desk/media";
 import { exportScene, keyPaper } from "@/lib/desk/images";
 import { activeSrc, useDesk } from "@/lib/desk/store";
-import type { Asset, SceneLayer } from "@/lib/desk/types";
+import { VIEW_LABEL, type Asset, type Beat, type SceneLayer } from "@/lib/desk/types";
 
 export function SceneBoard({ asset }: { asset: Asset }) {
   const project = useDesk((s) => s.project);
   const setLayer = useDesk((s) => s.setLayer);
   const removeLayer = useDesk((s) => s.removeLayer);
   const setBackgroundId = useDesk((s) => s.setBackgroundId);
+  const stageBeat = useDesk((s) => s.stageBeat);
+  const lockBeat = useDesk((s) => s.lockBeat);
   const pushTrace = useDesk((s) => s.pushTrace);
   const frameRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: string; x: number; y: number; dx: number; dy: number } | null>(null);
@@ -19,6 +21,8 @@ export function SceneBoard({ asset }: { asset: Asset }) {
   const fondo = fondos.find((item) => item.id === asset.scene?.backgroundId) ?? fondos[0];
   const bgUrl = useResolvedSrc(activeSrc(fondo));
   const layers = asset.scene?.layers ?? [];
+  const beats = asset.scene?.beats ?? [];
+  const activeBeatId = asset.scene?.activeBeatId;
   const [activeId, setActiveId] = useState(layers[0]?.id ?? "");
   const active = layers.find((layer) => layer.id === activeId) ?? layers[0];
 
@@ -52,6 +56,24 @@ export function SceneBoard({ asset }: { asset: Asset }) {
           </button>
         ))}
         {fondos.length === 0 && <p className="text-[13px] text-muted">No hay fondo. Crea uno y sube la escena que quieras.</p>}
+      </div>
+      <div className="mb-2 flex gap-2 overflow-x-auto">
+        {beats.map((beat, index) => (
+          <BeatChip
+            key={beat.id}
+            beat={beat}
+            index={index}
+            on={beat.id === activeBeatId}
+            onStage={() => stageBeat(asset.id, beat.id)}
+            onLock={() => {
+              lockBeat(asset.id, beat.id);
+              pushTrace({ role: "tool", tool: "fijar", text: `${beat.label} fijada. 0 láminas.`, cost: 0 });
+            }}
+          />
+        ))}
+        {beats.length === 0 && (
+          <p className="text-[12px] text-muted">En el chat del plano: Lina entra al muelle, para, mira el agua.</p>
+        )}
       </div>
       <div
         ref={frameRef}
@@ -116,8 +138,40 @@ export function SceneBoard({ asset }: { asset: Asset }) {
         </div>
       )}
       <p className="mt-2 text-[12px] text-muted">
-        El papel de la lámina se recorta en el navegador. Mover, escalar y exportar cuestan 0. La raya es el suelo.
+        Cada pose reusa frente o perfil. Fijar no pinta. La raya es el suelo.
       </p>
+    </div>
+  );
+}
+
+function BeatChip({
+  beat,
+  index,
+  on,
+  onStage,
+  onLock,
+}: {
+  beat: Beat;
+  index: number;
+  on: boolean;
+  onStage: () => void;
+  onLock: () => void;
+}) {
+  return (
+    <div className={`flex shrink-0 items-center gap-1 rounded-2xl border px-2 py-1 ${on ? "border-ink bg-fill" : "border-line bg-sheet"}`}>
+      <button type="button" onClick={onStage} className="text-left">
+        <span className="block text-[11px] font-medium text-ink">
+          {index + 1}. {beat.label}
+        </span>
+        <span className="block text-[10px] text-muted">
+          {VIEW_LABEL[beat.view]} · {beat.status === "fijado" ? "fijada" : "borrador"}
+        </span>
+      </button>
+      {beat.status !== "fijado" && (
+        <button type="button" onClick={onLock} className="rounded-full px-2 text-[10px] text-muted hover:text-ink">
+          Fijar
+        </button>
+      )}
     </div>
   );
 }
