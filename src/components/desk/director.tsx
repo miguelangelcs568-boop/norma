@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
-import { isShortOrder, runCall, runInterpreted } from "@/components/desk/engine";
+import { isLocalOrder, runCall, runInterpreted } from "@/components/desk/engine";
 import { useResolvedSrc } from "@/components/desk/media";
 import { directorPacket, interpret } from "@/lib/desk/brief";
 import { dirigir } from "@/lib/desk/deepseek.functions";
@@ -66,10 +66,7 @@ export function Director({
     }
     try {
       const target = scope === "asset" && asset ? asset : selectedAsset(useDesk.getState().project);
-      const localFirst =
-        !keys.deepseek ||
-        isShortOrder(said) ||
-        ["nuevo_personaje", "nuevo_fondo", "vista", "fondo", "escena", "partitura", "caminar", "nuevo_plano", "paleta", "ficha"].includes(cooked.intent);
+      const localFirst = !keys.deepseek || isLocalOrder(said, cooked.intent);
       if (localFirst) {
         await runInterpreted(said, target, keys);
         if (cooked.intent === "caminar") requestWalk();
@@ -79,7 +76,7 @@ export function Director({
       const imageDataUrl = url ? await shrinkSrc(url, 640) : undefined;
       const history = thread
         .filter((item) => item.role === "user" || item.role === "director")
-        .slice(-8)
+        .slice(-20)
         .map((item) => ({ role: item.role === "director" ? ("assistant" as const) : ("user" as const), content: item.text }));
       const result = await dirigir({
         data: { apiKey: keys.deepseek, brief: directorPacket(cooked, target, project), history, imageDataUrl },
