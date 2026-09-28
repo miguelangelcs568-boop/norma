@@ -1,7 +1,10 @@
-import { nid } from "./store";
 import type { Asset, Beat, DeskProject, ViewName } from "./types";
 
 const ACT = ["entra", "llega", "aparece", "camina", "anda", "para", "detien", "espera", "mira", "observa", "agua", "sale", "va", "corre", "voltea", "gira"];
+
+function nid() {
+  return Math.random().toString(36).slice(2, 10);
+}
 
 export function isActing(text: string) {
   const t = text.toLowerCase();
@@ -42,7 +45,7 @@ function pickCharacter(text: string, project: DeskProject): Asset | undefined {
 function chunksOf(said: string): string[] {
   const parts = said
     .toLowerCase()
-    .split(/,| y | luego | despu[eé]s |;/) 
+    .split(/,| y | luego | despu[eé]s |;/)
     .map((part) => part.trim())
     .filter((part) => part.length > 2);
   if (parts.length >= 2) return parts.slice(0, 6);
