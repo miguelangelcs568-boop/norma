@@ -1,11 +1,12 @@
 import { isActing } from "./partitura";
 import { VIEW_LABEL, type Asset, type DeskProject, type Spec, type ViewName } from "./types";
+import { isWalkAsk } from "./walk";
 
 export type Press = "reusar" | "derivar" | "pintar" | "componer" | "ficha" | "nada";
 
 export type Brief = {
   said: string;
-  intent: "vista" | "fondo" | "ficha" | "escena" | "partitura" | "nuevo_plano" | "nuevo_personaje" | "nuevo_fondo" | "paleta" | "hablar";
+  intent: "vista" | "fondo" | "ficha" | "escena" | "partitura" | "caminar" | "nuevo_plano" | "nuevo_personaje" | "nuevo_fondo" | "paleta" | "hablar";
   view: ViewName | null;
   spoken: string;
   paint: string;
@@ -81,7 +82,16 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   }
 
   if (has(text, ["otro plano", "siguiente plano", "nuevo plano", "plano nuevo"])) {
-    return { ...empty, intent: "nuevo_plano", spoken: "Abro el siguiente plano del rollo. Escribe ahí la acción. 0 láminas.", press: "componer" };
+    return { ...empty, intent: "nuevo_plano", spoken: "Abro el siguiente plano del rollo. 0 láminas.", press: "componer" };
+  }
+
+  if (isWalkAsk(text)) {
+    return {
+      ...empty,
+      intent: "caminar",
+      spoken: "Anda unos segundos. La cara es la lámina. Piernas y brazos se articulan. 0 láminas nuevas.",
+      press: "componer",
+    };
   }
 
   if (isActing(text) || (asset?.kind === "escena" && !has(text, ["fondo nuevo", "otro fondo"]))) {
@@ -89,23 +99,21 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       return {
         ...empty,
         intent: "partitura",
-        spoken: "Parto la frase en poses. Reuso las láminas que ya hay. Tú fijas. No pinto el capítulo.",
+        spoken: "Parto la frase en poses. Reuso las láminas que ya hay.",
         press: "componer",
       };
     }
   }
 
   if (/\bescena\b/.test(text) || has(text, ["coloca", "mueve", "ponla", "poner en"])) {
-    return { ...empty, intent: "escena", spoken: "Voy a la escena. Mover no pinta. Cuesta 0.", press: "componer" };
+    return { ...empty, intent: "escena", spoken: "Voy a la escena. Mover no pinta.", press: "componer" };
   }
 
   const placeWords = has(text, ["fondo", "lugar", "muelle", "escenario", "paisaje", "estero"]);
   const newPerson =
     !placeWords &&
     (has(text, ["un personaje", "otro personaje", "una persona", "un tipo", "quiero un personaje", "crea un personaje"]) ||
-      (asset?.kind === "personaje" &&
-        has(text, ["traje", "vestido"]) &&
-        !asset.spec.costume.toLowerCase().includes("traje")));
+      (asset?.kind === "personaje" && has(text, ["traje", "vestido"]) && !asset.spec.costume.toLowerCase().includes("traje")));
 
   if (newPerson) {
     const name = nameFrom(text, "personaje");
@@ -116,8 +124,8 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       said,
       intent: "nuevo_personaje",
       view: "frente",
-      spoken: `No es un prompt suelto. ${name}, ${role} Ropa: ${costume} Ficha primero. El frente solo si hay pincel o un boceto subido.`,
-      paint: paintLock("frente", `${name}. ${role} ${costume} Mundo ${WORLD.title}. Una sola persona.`),
+      spoken: `Ficha de ${name}. ${role}`,
+      paint: paintLock("frente", `${name}. ${role} ${costume}`),
       createKind: "personaje",
       createName: name,
       spec: { role, costume, never, notes: said.trim() },
@@ -128,16 +136,15 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (has(text, ["fondo nuevo", "otro fondo", "otro lugar", "un escenario", "un paisaje", "un muelle", "quiero un fondo", "crea un fondo", "pinta un lugar"])) {
     const name = nameFrom(text, "fondo");
     const light = lightFrom(text);
-    const notes = `${WORLD.place}. ${light} Sin personajes pintados.`;
     return {
       said,
       intent: "nuevo_fondo",
       view: "fondo",
-      spoken: `Lugar nuevo: ${name}. ${light} Ficha primero. Se pinta una vez si hay pincel.`,
-      paint: paintLock("fondo", `${name}. ${notes}`),
+      spoken: `Lugar nuevo: ${name}.`,
+      paint: paintLock("fondo", `${name}. ${WORLD.place}. ${light}`),
       createKind: "fondo",
       createName: name,
-      spec: { notes, never: ["No pintar personas en el fondo"], role: light },
+      spec: { notes: `${WORLD.place}. ${light}`, never: ["No pintar personas en el fondo"], role: light },
       press: "ficha",
     };
   }
@@ -145,13 +152,12 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   const view = pickView(text);
   if (view === "fondo") {
     const target = asset?.kind === "fondo" ? asset : project?.assets.find((item) => item.kind === "fondo");
-    const notes = target?.spec.notes || `${WORLD.place}. ${lightFrom(text)}`;
     return {
       said,
       intent: "fondo",
       view: "fondo",
-      spoken: target?.takes.length ? `${target.name} ya tiene lamina. La reuso.` : `Fondo: ${target?.name ?? "lugar"}. Sin personas.`,
-      paint: paintLock("fondo", `${target?.name ?? "Lugar"}. ${notes}`),
+      spoken: target?.takes.length ? `${target.name} ya tiene lamina.` : `Fondo: ${target?.name ?? "lugar"}.`,
+      paint: paintLock("fondo", `${target?.name ?? "Lugar"}.`),
       createName: "",
       spec: {},
       press: target?.takes.length ? "reusar" : "pintar",
@@ -160,20 +166,13 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
 
   if (view && asset && asset.kind === "personaje") {
     const have = asset.takes.find((take) => take.view === view);
-    const costume = asset.spec.costume || costumeFrom(text, "");
     const press: Press = have ? "reusar" : asset.takes.length > 0 ? "derivar" : "pintar";
-    const spoken =
-      press === "reusar"
-        ? `${VIEW_LABEL[view]} de ${asset.name} ya existe. No pinto otra cara.`
-        : press === "derivar"
-          ? `${VIEW_LABEL[view]} sale de una toma que ya tienes. Coste 0.`
-          : `${asset.name}, ${VIEW_LABEL[view]}. Ropa: ${costume}`;
     return {
       said,
       intent: "vista",
       view,
-      spoken,
-      paint: paintLock(view, `El mismo ${asset.name}. ${asset.spec.role} ${costume} ${asset.spec.never.join(". ")}.`),
+      spoken: press === "reusar" ? `${VIEW_LABEL[view]} ya existe.` : press === "derivar" ? `${VIEW_LABEL[view]} se deriva.` : `${VIEW_LABEL[view]}.`,
+      paint: paintLock(view, `${asset.name}. ${asset.spec.costume}`),
       createName: "",
       spec: {},
       press,
@@ -181,47 +180,15 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   }
 
   if (asset && has(text, ["ficha", "ropa", "vestuario", "oficio"])) {
-    return {
-      said,
-      intent: "ficha",
-      view: null,
-      spoken: `Actualizo la ficha de ${asset.name}. No pinto.`,
-      paint: "",
-      createName: "",
-      spec: { costume: costumeFrom(text, asset.spec.costume), notes: said.trim() },
-      press: "ficha",
-    };
+    return { said, intent: "ficha", view: null, spoken: `Actualizo ${asset.name}.`, paint: "", createName: "", spec: { costume: costumeFrom(text, asset.spec.costume), notes: said.trim() }, press: "ficha" };
   }
 
   if (asset) {
-    return {
-      ...empty,
-      spoken:
-        asset.kind === "escena"
-          ? `Chat del plano. Di una acción o: otro plano.`
-          : `Chat de ${asset.name}. Di frente, perfil o sube un boceto.`,
-      paint: paintLock(asset.kind === "fondo" ? "fondo" : "frente", `${asset.name}. ${asset.spec.costume}`),
-    };
+    return { ...empty, spoken: asset.kind === "escena" ? "Di una acción o que camine." : `Chat de ${asset.name}.` };
   }
-  return { ...empty, spoken: "Abre un personaje o di quiero un personaje / quiero un fondo." };
+  return { ...empty, spoken: "Abre un personaje o di quiero un personaje." };
 }
 
 export function directorPacket(brief: Brief, asset: Asset | undefined, project?: DeskProject) {
-  const roster =
-    project?.assets
-      .map((item) => `- ${item.name} (${item.kind}) vistas:${item.takes.map((take) => take.view).join(",") || "ninguna"}`)
-      .join("\n") ?? "";
-  return [
-    `Corto: ${project?.title ?? WORLD.title}`,
-    `Pedido en este chat: ${brief.said}`,
-    `Como lo lei: ${brief.spoken}`,
-    brief.paint ? `Brief de pintura: ${brief.paint}` : "",
-    `Chat abierto: ${asset?.name ?? "nada"} (${asset?.kind ?? ""}).`,
-    asset?.spec.costume ? `Vestuario ley: ${asset.spec.costume}` : "",
-    asset?.spec.never.length ? `Nunca: ${asset.spec.never.join("; ")}` : "",
-    roster ? `Canon del corto:\n${roster}` : "",
-    "Si el pedido es acción, parte en poses y reusa. Otro plano abre el siguiente corte.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return [`Corto: ${project?.title ?? WORLD.title}`, `Pedido: ${brief.said}`, brief.spoken, "Si piden caminar, articula. No pintes el capítulo."].join("\n");
 }
