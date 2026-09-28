@@ -84,6 +84,7 @@ export type DeskProject = {
   selectedId: string;
   platesSpent: number;
   trace: Trace[];
+  reel?: string[];
 };
 
 export type Brush = "off" | "trial" | "xai";
@@ -120,8 +121,8 @@ export function roomOf(project: DeskProject, asset: Asset | undefined): Trace[] 
 export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
     const n = asset.scene?.beats?.length ?? 0;
-    if (n === 0) return `${asset.name}. Una frase de acción se parte en poses. No se pinta el capítulo.`;
-    return `${asset.name}. ${n} poses. Ver recorre el tiempo. Cambia los segundos de cada una.`;
+    if (n === 0) return `${asset.name}. Una frase de acción se parte en poses. Luego otro plano.`;
+    return `${asset.name}. ${n} poses. Ver este plano o Ver el rollo.`;
   }
   const miss = missingViews(asset);
   if (miss.length === 0) {
