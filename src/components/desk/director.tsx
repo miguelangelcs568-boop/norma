@@ -10,18 +10,30 @@ import { pushGeneral } from "@/lib/desk/log";
 import { activeSrc, selectedAsset, useDesk } from "@/lib/desk/store";
 import { roomOf } from "@/lib/desk/types";
 
-export function Director({ keys, hub = false, assetId }: { keys: DeskKeys; hub?: boolean; assetId?: string }) {
+export function Director({
+  keys,
+  hub = false,
+  assetId,
+  roomId,
+  onRoom,
+}: {
+  keys: DeskKeys;
+  hub?: boolean;
+  assetId?: string;
+  roomId?: string;
+  onRoom?: (id: string) => void;
+}) {
   const project = useDesk((s) => s.project);
   const pushTrace = useDesk((s) => s.pushTrace);
   const setLastBrief = useDesk((s) => s.setLastBrief);
   const select = useDesk((s) => s.select);
-  const [roomId, setRoomId] = useState(assetId ?? "general");
+  const [localRoom, setLocalRoom] = useState(assetId ?? "general");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const rooms = [{ id: "general", name: "Corto" }, ...project.assets.map((item) => ({ id: item.id, name: item.name.split(" ")[0] ?? item.name }))];
-  const current = hub ? roomId : (assetId ?? "general");
+  const current = hub ? (roomId ?? localRoom) : (assetId ?? "general");
   const scope = current === "general" ? "general" : "asset";
   const asset =
     scope === "general"
@@ -29,6 +41,11 @@ export function Director({ keys, hub = false, assetId }: { keys: DeskKeys; hub?:
       : project.assets.find((item) => item.id === current) ?? selectedAsset(project);
   const thread = scope === "general" ? (project.trace ?? []) : roomOf(project, asset);
   const url = useResolvedSrc(activeSrc(asset));
+
+  function go(id: string) {
+    setLocalRoom(id);
+    onRoom?.(id);
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -99,7 +116,7 @@ export function Director({ keys, hub = false, assetId }: { keys: DeskKeys; hub?:
             <button
               key={item.id}
               type="button"
-              onClick={() => setRoomId(item.id)}
+              onClick={() => go(item.id)}
               className={`h-7 shrink-0 rounded-full px-3 text-[12px] font-medium ${item.id === current ? "bg-ink text-sheet" : "text-muted hover:text-ink"}`}
             >
               {item.name}
@@ -148,15 +165,10 @@ export function Director({ keys, hub = false, assetId }: { keys: DeskKeys; hub?:
             value={text}
             onChange={(event) => setText(event.target.value)}
             disabled={busy}
-            placeholder={busy ? "…" : scope === "general" ? "Mensaje" : asset?.name}
+            placeholder={busy ? "…" : scope === "general" ? "Al corto" : asset?.name}
             className="h-9 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-50"
           />
-          <button
-            type="submit"
-            disabled={busy || !text.trim()}
-            aria-label="Enviar"
-            className="flex size-8 items-center justify-center rounded-full bg-ink text-sheet disabled:opacity-30"
-          >
+          <button type="submit" disabled={busy || !text.trim()} aria-label="Enviar" className="flex size-8 items-center justify-center rounded-full bg-ink text-sheet disabled:opacity-30">
             <ArrowUp className="size-4" />
           </button>
         </div>
