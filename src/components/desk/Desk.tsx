@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { FilePlus, FolderOpen, HardDrive, MessageSquare, Moon, Settings, Sun } from "lucide-react";
+import { FolderOpen, HardDrive, LayoutGrid, MessageSquare, Moon, Settings, Sun } from "lucide-react";
 import { Director } from "@/components/desk/director";
 import { Dock, SidePanel, type DrawerKind } from "@/components/desk/drawers";
+import { ProjectsPanel } from "@/components/desk/ProjectsPanel";
 import { SettingsPanel } from "@/components/desk/SettingsPanel";
 import { Stage } from "@/components/desk/stage";
 import { loadKeys, saveKeys, type DeskKeys } from "@/lib/desk/keys";
+import {
+  addBlank,
+  addDemo,
+  bootShelf,
+  dropFromShelf,
+  openOnShelf,
+  remember,
+  type Shelf,
+} from "@/lib/desk/library";
 import { downloadPack, packProject, readPackFile } from "@/lib/desk/pack";
 import { applyTheme, loadPrefs, savePrefs, type Theme } from "@/lib/desk/prefs";
 import { useDesk } from "@/lib/desk/store";
@@ -14,14 +24,14 @@ export function Desk() {
   const project = useDesk((s) => s.project);
   const select = useDesk((s) => s.select);
   const loadProject = useDesk((s) => s.loadProject);
-  const newBlank = useDesk((s) => s.newBlank);
-  const resetDemo = useDesk((s) => s.resetDemo);
   const setTitle = useDesk((s) => s.setTitle);
   const viewer =
     project.assets.find((item) => item.kind === "escena" && item.id === project.selectedId) ??
     project.assets.find((item) => item.kind === "escena") ??
     project.assets[0];
   const [settings, setSettings] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [shelf, setShelf] = useState<Shelf | null>(null);
   const [keys, setKeys] = useState<DeskKeys>({ deepseek: "", image: "", brush: "off" });
   const [theme, setTheme] = useState<Theme>("light");
   const [ready, setReady] = useState(false);
@@ -35,6 +45,7 @@ export function Desk() {
     void useDesk.persist.rehydrate().then(() => {
       const desk = useDesk.getState();
       desk.loadProject(desk.project);
+      setShelf(bootShelf(desk.project));
       setReady(true);
     });
     setKeys(loadKeys());
@@ -42,6 +53,12 @@ export function Desk() {
     setTheme(prefs.theme);
     applyTheme(prefs.theme);
   }, []);
+
+  useEffect(() => {
+    if (!ready || !shelf) return;
+    const timer = window.setTimeout(() => setShelf(remember(shelf, useDesk.getState().project)), 800);
+    return () => window.clearTimeout(timer);
+  }, [project, ready, shelf?.currentId]);
 
   function chooseTheme(next: Theme) {
     setTheme(next);
@@ -64,27 +81,42 @@ export function Desk() {
     }
   }
 
-  async function startBlank() {
-    const current = useDesk.getState().project;
-    const dirty = current.assets.length > 0 || (current.title && current.title !== "Sin título");
-    if (dirty) {
-      const saveFirst = window.confirm("¿Guardar el corto actual en el PC antes de abrir uno vacío?");
-      if (saveFirst) await packProject(current).then(downloadPack);
-      const ok = window.confirm("La mesa queda sin láminas ni personajes. Punta Palma sigue en Abrir y en Ajustes. ¿Abrir vacío?");
-      if (!ok) return;
-    }
-    newBlank();
+  function sit(next: { shelf: Shelf; project: typeof project }) {
+    setShelf(next.shelf);
+    loadProject(next.project);
     setTalkId("general");
     setDrawer(null);
     setDrawerId(null);
+    setProjectsOpen(false);
   }
 
-  function restoreDemo() {
-    const ok = window.confirm("¿Volver al corto de muestra La sal de Punta Palma? Lo de ahora se puede guardar antes con el disco.");
-    if (!ok) return;
-    resetDemo();
-    setTalkId("general");
-    setDrawer(null);
+  function goNew() {
+    if (!shelf) return;
+    sit(addBlank(shelf, useDesk.getState().project));
+  }
+
+  function goOpen(id: string) {
+    if (!shelf) return;
+    const next = openOnShelf(shelf, id, useDesk.getState().project);
+    if (next) sit(next);
+  }
+
+  function goDemo() {
+    if (!shelf) return;
+    sit(addDemo(shelf, useDesk.getState().project));
+  }
+
+  function goDrop(id: string) {
+    if (!shelf) return;
+    const next = dropFromShelf(shelf, id);
+    setShelf(next);
+    if (next.currentId !== shelf.currentId) {
+      const item = next.items.find((entry) => entry.id === next.currentId);
+      if (item) {
+        loadProject(item.project);
+        setTalkId("general");
+      }
+    }
   }
 
   if (!ready) {
@@ -94,12 +126,16 @@ export function Desk() {
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-vellum text-ink">
       <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-line bg-sheet/80 px-3 backdrop-blur">
-        <input
-          value={project.title}
-          onChange={(event) => setTitle(event.target.value)}
-          aria-label="Título del corto"
-          className="min-w-0 flex-1 truncate bg-transparent text-[15px] font-semibold tracking-tight text-ink outline-none"
-        />
+        <button type="button" onClick={() => setProjectsOpen(true)} className="flex min-w-0 items-center gap-2 text-left">
+          <LayoutGrid className="size-4 shrink-0 text-muted" strokeWidth={1.6} />
+          <input
+            value={project.title}
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) => setTitle(event.target.value)}
+            aria-label="Título del corto"
+            className="min-w-0 flex-1 truncate bg-transparent text-[15px] font-semibold tracking-tight text-ink outline-none"
+          />
+        </button>
         <div className="flex items-center gap-0.5">
           <input
             ref={fileRef}
@@ -112,13 +148,13 @@ export function Desk() {
               if (file) void readPackFile(file).then(loadProject);
             }}
           />
-          <IconBtn label="Proyecto nuevo" onClick={() => void startBlank()}>
-            <FilePlus className="size-4" strokeWidth={1.6} />
+          <IconBtn label="Proyectos" pressed={projectsOpen} onClick={() => setProjectsOpen(true)}>
+            <LayoutGrid className="size-4" strokeWidth={1.6} />
           </IconBtn>
           <IconBtn label="Guardar" onClick={() => void packProject(project).then(downloadPack)}>
             <HardDrive className="size-4" strokeWidth={1.6} />
           </IconBtn>
-          <IconBtn label="Abrir" onClick={() => fileRef.current?.click()}>
+          <IconBtn label="Abrir archivo" onClick={() => fileRef.current?.click()}>
             <FolderOpen className="size-4" strokeWidth={1.6} />
           </IconBtn>
           <IconBtn label="Conversación" pressed={chatOpen} onClick={() => setChatOpen((value) => !value)}>
@@ -132,6 +168,16 @@ export function Desk() {
           </IconBtn>
         </div>
       </header>
+      {projectsOpen && shelf && (
+        <ProjectsPanel
+          shelf={shelf}
+          onOpen={goOpen}
+          onNew={goNew}
+          onDemo={goDemo}
+          onDrop={goDrop}
+          onClose={() => setProjectsOpen(false)}
+        />
+      )}
       {settings && (
         <SettingsPanel
           keys={keys}
@@ -141,11 +187,11 @@ export function Desk() {
           onClose={() => setSettings(false)}
           onBlank={() => {
             setSettings(false);
-            void startBlank();
+            setProjectsOpen(true);
           }}
           onDemo={() => {
             setSettings(false);
-            restoreDemo();
+            goDemo();
           }}
           onSave={() => {
             saveKeys(keys);
@@ -165,7 +211,7 @@ export function Desk() {
               <div className="flex min-h-0 flex-1 items-center justify-center bg-well p-6">
                 <div className="relative aspect-video w-full max-h-full max-w-[min(100%,calc(100dvh-8rem))] overflow-hidden rounded-sm bg-black shadow-sheet">
                   <p className="absolute inset-0 grid place-items-center px-8 text-center text-[14px] leading-relaxed text-white/55">
-                    Mesa vacía. En el chat dile el título y el primer personaje. Nada se pinta hasta que lo pidas.
+                    Proyecto vacío. En el chat pide un personaje o un lugar. NORMA pinta la primera lámina.
                   </p>
                 </div>
               </div>
