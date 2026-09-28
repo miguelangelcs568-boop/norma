@@ -1,11 +1,32 @@
 import { useRef, useState, type PointerEvent } from "react";
-import { Download, FlipHorizontal } from "lucide-react";
+import { Download, FlipHorizontal, Pause, Play } from "lucide-react";
 import { Button, Field } from "@/components/desk/controls";
 import { objectFromIdb } from "@/components/desk/engine";
 import { useCutout, useResolvedSrc } from "@/components/desk/media";
 import { exportScene, keyPaper } from "@/lib/desk/images";
 import { activeSrc, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Beat, type SceneLayer } from "@/lib/desk/types";
+
+function ease(t: number) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+function tween(ms: number, tick: (t: number) => void) {
+  return new Promise<void>((resolve) => {
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      tick(ease(t));
+      if (t < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export function SceneBoard({ asset }: { asset: Asset }) {
   const project = useDesk((s) => s.project);
@@ -17,6 +38,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
   const pushTrace = useDesk((s) => s.pushTrace);
   const frameRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: string; x: number; y: number; dx: number; dy: number } | null>(null);
+  const stopRef = useRef(false);
   const fondos = project.assets.filter((item) => item.kind === "fondo");
   const fondo = fondos.find((item) => item.id === asset.scene?.backgroundId) ?? fondos[0];
   const bgUrl = useResolvedSrc(activeSrc(fondo));
@@ -24,7 +46,40 @@ export function SceneBoard({ asset }: { asset: Asset }) {
   const beats = asset.scene?.beats ?? [];
   const activeBeatId = asset.scene?.activeBeatId;
   const [activeId, setActiveId] = useState(layers[0]?.id ?? "");
+  const [playing, setPlaying] = useState(false);
   const active = layers.find((layer) => layer.id === activeId) ?? layers[0];
+
+  async function play() {
+    if (beats.length < 2 || playing) return;
+    stopRef.current = false;
+    setPlaying(true);
+    pushTrace({ role: "tool", tool: "ver", text: `Recorre ${beats.length} poses. El recorte se mueve. 0 láminas.`, cost: 0 });
+    try {
+      for (let i = 0; i < beats.length; i++) {
+        if (stopRef.current) break;
+        const from = beats[i];
+        const to = beats[i + 1];
+        stageBeat(asset.id, from.id);
+        await wait(280);
+        if (!to || stopRef.current) continue;
+        const layerId =
+          useDesk.getState().project.assets.find((item) => item.id === asset.id)?.scene?.layers[0]?.id ?? active?.id;
+        if (!layerId) continue;
+        await tween(900, (t) => {
+          if (stopRef.current) return;
+          setLayer(asset.id, layerId, {
+            x: from.x + (to.x - from.x) * t,
+            y: from.y + (to.y - from.y) * t,
+            scale: from.scale + (to.scale - from.scale) * t,
+            flip: t < 0.5 ? from.flip : to.flip,
+          });
+        });
+        stageBeat(asset.id, to.id);
+      }
+    } finally {
+      setPlaying(false);
+    }
+  }
 
   async function save() {
     if (!bgUrl || layers.length === 0) return;
@@ -57,7 +112,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
         ))}
         {fondos.length === 0 && <p className="text-[13px] text-muted">No hay fondo. Crea uno y sube la escena que quieras.</p>}
       </div>
-      <div className="mb-2 flex gap-2 overflow-x-auto">
+      <div className="mb-2 flex items-center gap-2 overflow-x-auto">
         {beats.map((beat, index) => (
           <BeatChip
             key={beat.id}
@@ -71,15 +126,28 @@ export function SceneBoard({ asset }: { asset: Asset }) {
             }}
           />
         ))}
+        {beats.length >= 2 && (
+          <Button
+            tone="ink"
+            onClick={() => {
+              if (playing) stopRef.current = true;
+              else void play();
+            }}
+          >
+            {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+            {playing ? "Parar" : "Ver"}
+          </Button>
+        )}
         {beats.length === 0 && (
           <p className="text-[12px] text-muted">En el chat del plano: Lina entra al muelle, para, mira el agua.</p>
         )}
+        {beats.length === 1 && <p className="text-[12px] text-muted">Hace falta otra pose para Ver.</p>}
       </div>
       <div
         ref={frameRef}
         className="relative aspect-video w-full overflow-hidden rounded-2xl bg-ink"
         onPointerMove={(event) => {
-          if (!drag.current || !frameRef.current) return;
+          if (playing || !drag.current || !frameRef.current) return;
           const rect = frameRef.current.getBoundingClientRect();
           const x = drag.current.x + (event.clientX - drag.current.dx) / rect.width;
           const y = drag.current.y + (event.clientY - drag.current.dy) / rect.height;
@@ -99,6 +167,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
             key={layer.id}
             layer={layer}
             onDown={(event) => {
+              if (playing) return;
               const frame = frameRef.current;
               if (!frame) return;
               frame.setPointerCapture(event.pointerId);
@@ -138,7 +207,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
         </div>
       )}
       <p className="mt-2 text-[12px] text-muted">
-        Cada pose reusa frente o perfil. Fijar no pinta. La raya es el suelo.
+        Ver desliza el mismo recorte entre poses. No pinta. La raya es el suelo.
       </p>
     </div>
   );
