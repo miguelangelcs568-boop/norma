@@ -4,12 +4,13 @@ import { getBlob, putBlob } from "@/lib/desk/idb";
 import { generarLamina } from "@/lib/desk/image.functions";
 import { dataUrlToBlob, extractPalette, flipSrc, shrinkSrc } from "@/lib/desk/images";
 import type { DeskKeys } from "@/lib/desk/keys";
+import { planBeats } from "@/lib/desk/partitura";
 import { activeSrc, emptySpec, nid, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
 export function isShortOrder(brief: string) {
   const text = brief.trim().toLowerCase();
-  return text.length < 48 || /^(fondo|perfil|frente|espalda|expres|paleta|escena|tres|ficha)\b/.test(text);
+  return text.length < 48 || /^(fondo|perfil|frente|espalda|expres|paleta|escena|tres|ficha|entra|mira|para)\b/.test(text);
 }
 
 export async function runInterpreted(said: string, asset: Asset | undefined, keys: DeskKeys) {
@@ -22,6 +23,25 @@ export async function runLocal(brief: string, asset: Asset | undefined, keys: De
   await runInterpreted(brief, asset, keys);
 }
 
+function writePartitura(said: string, asset: Asset | undefined) {
+  const desk = useDesk.getState();
+  const scene = asset?.kind === "escena" ? asset : desk.project.assets.find((item) => item.kind === "escena");
+  if (!scene) {
+    desk.pushTrace({ role: "director", text: "No hay plano. Crea uno en Archivo." });
+    return;
+  }
+  const beats = planBeats(said, desk.project);
+  desk.select(scene.id);
+  desk.setBeats(scene.id, beats);
+  if (beats[0]) desk.stageBeat(scene.id, beats[0].id);
+  desk.pushTrace({
+    role: "tool",
+    tool: "partitura",
+    text: `${beats.length} poses: ${beats.map((beat) => beat.label).join(" → ")}. Reuso. 0 láminas.`,
+    cost: 0,
+  });
+}
+
 async function enact(brief: Brief, asset: Asset | undefined, keys: DeskKeys) {
   const desk = useDesk.getState();
   if (brief.intent === "paleta" && asset) {
@@ -31,6 +51,10 @@ async function enact(brief: Brief, asset: Asset | undefined, keys: DeskKeys) {
     const palette = await extractPalette(resolved);
     desk.patchSpec(asset.id, { palette });
     desk.pushTrace({ role: "tool", tool: "paleta", text: palette.join(" "), cost: 0 });
+    return;
+  }
+  if (brief.intent === "partitura") {
+    writePartitura(brief.said, asset);
     return;
   }
   if (brief.intent === "escena") {
@@ -75,6 +99,10 @@ async function enact(brief: Brief, asset: Asset | undefined, keys: DeskKeys) {
 
 export async function runCall(name: string, args: CallArgs, asset: Asset | undefined, keys: DeskKeys) {
   const desk = useDesk.getState();
+  if (name === "partitura") {
+    writePartitura(args.prompt || args.notes, asset);
+    return;
+  }
   if (name === "crear_activo") {
     const kind = args.kind === "fondo" ? "fondo" : "personaje";
     const created: Asset = {
