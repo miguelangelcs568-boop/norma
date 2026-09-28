@@ -5,7 +5,7 @@ export type Press = "reusar" | "derivar" | "pintar" | "componer" | "ficha" | "na
 
 export type Brief = {
   said: string;
-  intent: "vista" | "fondo" | "ficha" | "escena" | "partitura" | "nuevo_personaje" | "nuevo_fondo" | "paleta" | "hablar";
+  intent: "vista" | "fondo" | "ficha" | "escena" | "partitura" | "nuevo_plano" | "nuevo_personaje" | "nuevo_fondo" | "paleta" | "hablar";
   view: ViewName | null;
   spoken: string;
   paint: string;
@@ -78,6 +78,10 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
 
   if (has(text, ["paleta", "colores"])) {
     return { ...empty, intent: "paleta", spoken: "Saco la paleta de la lamina abierta. Cuesta 0.", press: "ficha" };
+  }
+
+  if (has(text, ["otro plano", "siguiente plano", "nuevo plano", "plano nuevo"])) {
+    return { ...empty, intent: "nuevo_plano", spoken: "Abro el siguiente plano del rollo. Escribe ahí la acción. 0 láminas.", press: "componer" };
   }
 
   if (isActing(text) || (asset?.kind === "escena" && !has(text, ["fondo nuevo", "otro fondo"]))) {
@@ -194,7 +198,7 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       ...empty,
       spoken:
         asset.kind === "escena"
-          ? `Chat del plano. Di una acción: Lina entra al muelle, para, mira el agua.`
+          ? `Chat del plano. Di una acción o: otro plano.`
           : `Chat de ${asset.name}. Di frente, perfil o sube un boceto.`,
       paint: paintLock(asset.kind === "fondo" ? "fondo" : "frente", `${asset.name}. ${asset.spec.costume}`),
     };
@@ -216,7 +220,7 @@ export function directorPacket(brief: Brief, asset: Asset | undefined, project?:
     asset?.spec.costume ? `Vestuario ley: ${asset.spec.costume}` : "",
     asset?.spec.never.length ? `Nunca: ${asset.spec.never.join("; ")}` : "",
     roster ? `Canon del corto:\n${roster}` : "",
-    "Si el pedido es acción, parte en poses y reusa. No pintes el capítulo.",
+    "Si el pedido es acción, parte en poses y reusa. Otro plano abre el siguiente corte.",
   ]
     .filter(Boolean)
     .join("\n");
