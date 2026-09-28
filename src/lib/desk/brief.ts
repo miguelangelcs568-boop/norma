@@ -16,12 +16,15 @@ export type Brief = {
   press: Press;
 };
 
-const WORLD = {
-  title: "La sal de Punta Palma",
-  place: "Estero del Caribe colombiano, calor humedo, sal, mangle y muelle",
-  look: "Animacion 2D, linea limpia, color plano, no 3D, no foto, no catalogo",
-  paper: "papel calido, cuerpo entero, margen amplio, sin texto, sin gente extra",
-};
+function worldOf(project?: DeskProject) {
+  const seeded = project?.title === "La sal de Punta Palma";
+  return {
+    title: project?.title || "Sin título",
+    place: (project?.place && project.place.trim()) || (seeded ? "Estero del Caribe colombiano, calor humedo, sal, mangle y muelle" : ""),
+    look: (project?.look && project.look.trim()) || "Animacion 2D, linea limpia, color plano, no 3D, no foto, no catalogo",
+    paper: "papel calido, cuerpo entero, margen amplio, sin texto, sin gente extra",
+  };
+}
 
 function has(text: string, words: string[]) {
   return words.some((word) => text.includes(word));
@@ -56,7 +59,7 @@ function costumeFrom(text: string, fallback: string) {
 function lightFrom(text: string) {
   if (has(text, ["noche", "luna"])) return "Noche calida, poca luz electrica.";
   if (has(text, ["amanecer", "manana"])) return "Luz baja de manana.";
-  return "Tarde, sol largo, sal en el aire.";
+  return "Tarde, sol largo.";
 }
 
 function nameFrom(text: string, kind: "personaje" | "fondo") {
@@ -66,13 +69,15 @@ function nameFrom(text: string, kind: "personaje" | "fondo") {
   return has(text, ["traje"]) ? "Hombre del traje" : "Personaje nuevo";
 }
 
-export function paintLock(view: ViewName | null, body: string) {
-  const tail = view === "fondo" ? "Fondo 16:9, sin personas, sin texto." : WORLD.paper;
+export function paintLock(view: ViewName | null, body: string, project?: DeskProject) {
+  const world = worldOf(project);
+  const tail = view === "fondo" ? "Fondo 16:9, sin personas, sin texto." : world.paper;
   const vista = view ? `Vista: ${VIEW_LABEL[view]}.` : "";
-  return [WORLD.look, body, tail, vista].filter(Boolean).join(" ");
+  return [world.look, body, tail, vista].filter(Boolean).join(" ");
 }
 
 export function interpret(said: string, asset: Asset | undefined, project?: DeskProject): Brief {
+  const world = worldOf(project);
   const text = said.trim().toLowerCase();
   const empty: Brief = { said, intent: "hablar", view: null, spoken: "", paint: "", createName: "", spec: {}, press: "nada" };
   if (!text) return { ...empty, spoken: "Escribe que quieres. Una frase basta." };
@@ -118,14 +123,15 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (newPerson) {
     const name = nameFrom(text, "personaje");
     const costume = costumeFrom(text, "");
-    const role = `${heightFrom(text)}. Vive en ${WORLD.place}.`;
+    const where = world.place ? ` Vive en ${world.place}.` : " Pueblo aún sin ficha.";
+    const role = `${heightFrom(text)}.${where}`;
     const never = ["No joyas inventadas", "No look de revista", "No cambiar el vestuario aprobado"];
     return {
       said,
       intent: "nuevo_personaje",
       view: "frente",
       spoken: `Ficha de ${name}. ${role}`,
-      paint: paintLock("frente", `${name}. ${role} ${costume}`),
+      paint: paintLock("frente", `${name}. ${role} ${costume}`, project),
       createKind: "personaje",
       createName: name,
       spec: { role, costume, never, notes: said.trim() },
@@ -136,15 +142,16 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (has(text, ["fondo nuevo", "otro fondo", "otro lugar", "un escenario", "un paisaje", "un muelle", "quiero un fondo", "crea un fondo", "pinta un lugar"])) {
     const name = nameFrom(text, "fondo");
     const light = lightFrom(text);
+    const where = world.place || "Lugar nuevo, aún sin canon.";
     return {
       said,
       intent: "nuevo_fondo",
       view: "fondo",
       spoken: `Lugar nuevo: ${name}.`,
-      paint: paintLock("fondo", `${name}. ${WORLD.place}. ${light}`),
+      paint: paintLock("fondo", `${name}. ${where}. ${light}`, project),
       createKind: "fondo",
       createName: name,
-      spec: { notes: `${WORLD.place}. ${light}`, never: ["No pintar personas en el fondo"], role: light },
+      spec: { notes: `${where}. ${light}`, never: ["No pintar personas en el fondo"], role: light },
       press: "ficha",
     };
   }
@@ -157,7 +164,7 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       intent: "fondo",
       view: "fondo",
       spoken: target?.takes.length ? `${target.name} ya tiene lamina.` : `Fondo: ${target?.name ?? "lugar"}.`,
-      paint: paintLock("fondo", `${target?.name ?? "Lugar"}.`),
+      paint: paintLock("fondo", `${target?.name ?? "Lugar"}.`, project),
       createName: "",
       spec: {},
       press: target?.takes.length ? "reusar" : "pintar",
@@ -172,7 +179,7 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
       intent: "vista",
       view,
       spoken: press === "reusar" ? `${VIEW_LABEL[view]} ya existe.` : press === "derivar" ? `${VIEW_LABEL[view]} se deriva.` : `${VIEW_LABEL[view]}.`,
-      paint: paintLock(view, `${asset.name}. ${asset.spec.costume}`),
+      paint: paintLock(view, `${asset.name}. ${asset.spec.costume}`, project),
       createName: "",
       spec: {},
       press,
@@ -186,9 +193,19 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (asset) {
     return { ...empty, spoken: asset.kind === "escena" ? "Di una acción o que camine." : `Chat de ${asset.name}.` };
   }
+  if (!project?.assets.length) {
+    return { ...empty, spoken: "Mesa vacía. Dime el título, un personaje o un lugar. Nada se pinta hasta que lo pidas." };
+  }
   return { ...empty, spoken: "Abre un personaje o di quiero un personaje." };
 }
 
 export function directorPacket(brief: Brief, asset: Asset | undefined, project?: DeskProject) {
-  return [`Corto: ${project?.title ?? WORLD.title}`, `Pedido: ${brief.said}`, brief.spoken, "Si piden caminar, articula. No pintes el capítulo."].join("\n");
+  const world = worldOf(project);
+  return [
+    `Corto: ${world.title}`,
+    world.place ? `Mundo: ${world.place}` : "Mundo: aún sin ficha.",
+    `Pedido: ${brief.said}`,
+    brief.spoken,
+    "Si piden caminar, articula. No pintes el capítulo.",
+  ].join("\n");
 }
