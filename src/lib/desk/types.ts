@@ -49,6 +49,7 @@ export type Beat = {
   scale: number;
   flip: boolean;
   status: "borrador" | "fijado";
+  ms?: number;
 };
 
 export type Scene = {
@@ -120,7 +121,7 @@ export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
     const n = asset.scene?.beats?.length ?? 0;
     if (n === 0) return `${asset.name}. Una frase de acción se parte en poses. No se pinta el capítulo.`;
-    return `${asset.name}. ${n} poses. Clic en una o fíjala. Reusa láminas.`;
+    return `${asset.name}. ${n} poses. Ver recorre el tiempo. Cambia los segundos de cada una.`;
   }
   const miss = missingViews(asset);
   if (miss.length === 0) {
