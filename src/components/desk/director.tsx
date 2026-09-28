@@ -7,6 +7,7 @@ import { dirigir } from "@/lib/desk/deepseek.functions";
 import { shrinkSrc } from "@/lib/desk/images";
 import type { DeskKeys } from "@/lib/desk/keys";
 import { pushGeneral } from "@/lib/desk/log";
+import { requestWalk } from "@/lib/desk/walk-bus";
 import { activeSrc, selectedAsset, useDesk } from "@/lib/desk/store";
 import { roomOf } from "@/lib/desk/types";
 
@@ -68,9 +69,10 @@ export function Director({
       const localFirst =
         !keys.deepseek ||
         isShortOrder(said) ||
-        ["nuevo_personaje", "nuevo_fondo", "vista", "fondo", "escena", "partitura", "nuevo_plano", "paleta", "ficha"].includes(cooked.intent);
+        ["nuevo_personaje", "nuevo_fondo", "vista", "fondo", "escena", "partitura", "caminar", "nuevo_plano", "paleta", "ficha"].includes(cooked.intent);
       if (localFirst) {
         await runInterpreted(said, target, keys);
+        if (cooked.intent === "caminar") requestWalk();
         if (scope === "general") pushGeneral({ role: "director", text: cooked.spoken });
         return;
       }
@@ -141,11 +143,7 @@ export function Director({
           const mine = item.role === "user";
           return (
             <div key={item.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <p
-                className={`max-w-[85%] px-3.5 py-2 text-[15px] leading-snug ${
-                  mine ? "rounded-[20px] rounded-br-md bg-ink text-sheet" : "rounded-[20px] rounded-bl-md bg-fill text-ink"
-                }`}
-              >
+              <p className={`max-w-[85%] px-3.5 py-2 text-[15px] leading-snug ${mine ? "rounded-[20px] rounded-br-md bg-ink text-sheet" : "rounded-[20px] rounded-bl-md bg-fill text-ink"}`}>
                 {item.text}
               </p>
             </div>
@@ -161,13 +159,7 @@ export function Director({
         }}
       >
         <div className="flex items-center gap-2 rounded-full bg-fill px-2 py-1">
-          <input
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            disabled={busy}
-            placeholder={busy ? "…" : scope === "general" ? "Al corto" : asset?.name}
-            className="h-9 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-50"
-          />
+          <input value={text} onChange={(event) => setText(event.target.value)} disabled={busy} placeholder={busy ? "…" : scope === "general" ? "Al corto" : asset?.name} className="h-9 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-50" />
           <button type="submit" disabled={busy || !text.trim()} aria-label="Enviar" className="flex size-8 items-center justify-center rounded-full bg-ink text-sheet disabled:opacity-30">
             <ArrowUp className="size-4" />
           </button>
