@@ -7,6 +7,9 @@ export type ViewName =
   | "tres_cuartos"
   | "espalda"
   | "expresion"
+  | "camina"
+  | "para"
+  | "mira"
   | "fondo"
   | "prop";
 
@@ -96,15 +99,37 @@ export const VIEW_LABEL: Record<ViewName, string> = {
   tres_cuartos: "Tres cuartos",
   espalda: "Espalda",
   expresion: "Expresión",
+  camina: "Camina",
+  para: "Para",
+  mira: "Mira",
   fondo: "Fondo",
   prop: "Prop",
 };
 
+export const ACTING_VIEWS: ViewName[] = ["camina", "para", "mira"];
+
 export function viewsFor(kind: AssetKind): ViewName[] {
   if (kind === "fondo") return ["fondo"];
   if (kind === "prop") return ["prop"];
-  if (kind === "personaje") return ["frente", "perfil", "tres_cuartos", "espalda", "expresion"];
+  if (kind === "personaje") return ["camina", "para", "mira", "frente", "perfil", "tres_cuartos", "espalda", "expresion"];
   return [];
+}
+
+export function takeFor(asset: Asset | undefined, view: ViewName): Take | undefined {
+  if (!asset) return undefined;
+  const order: ViewName[] =
+    view === "camina"
+      ? ["camina", "perfil", "frente"]
+      : view === "para"
+        ? ["para", "frente", "perfil"]
+        : view === "mira"
+          ? ["mira", "perfil", "frente"]
+          : [view, "frente", "perfil"];
+  for (const name of order) {
+    const hit = asset.takes.find((item) => item.view === name);
+    if (hit) return hit;
+  }
+  return asset.takes[0];
 }
 
 export function missingViews(asset: Asset): ViewName[] {
@@ -121,12 +146,10 @@ export function roomOf(project: DeskProject, asset: Asset | undefined): Trace[] 
 export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
     const n = asset.scene?.beats?.length ?? 0;
-    if (n === 0) return `${asset.name}. Una frase de acción se parte en poses. Luego otro plano.`;
-    return `${asset.name}. ${n} poses. Ver este plano o Ver el rollo.`;
+    if (n === 0) return `${asset.name}. Una frase de acción se parte en poses.`;
+    return `${asset.name}. ${n} poses.`;
   }
-  const miss = missingViews(asset);
-  if (miss.length === 0) {
-    return `${asset.name} cubierto. Lo que pidas se reusa o se deriva.`;
-  }
-  return `${asset.name}. Falta ${miss.map((view) => VIEW_LABEL[view]).join(", ")}. Una frase en este chat basta.`;
+  const body = ACTING_VIEWS.filter((view) => !asset.takes.some((take) => take.view === view));
+  if (body.length) return `${asset.name}. Falta cuerpo: ${body.map((view) => VIEW_LABEL[view]).join(", ")}.`;
+  return `${asset.name} tiene cuerpo. El plano lo reusa.`;
 }
