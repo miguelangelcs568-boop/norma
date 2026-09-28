@@ -38,9 +38,24 @@ export type SceneLayer = {
   flip: boolean;
 };
 
+export type Beat = {
+  id: string;
+  label: string;
+  action: string;
+  view: ViewName;
+  characterId: string;
+  x: number;
+  y: number;
+  scale: number;
+  flip: boolean;
+  status: "borrador" | "fijado";
+};
+
 export type Scene = {
   backgroundId?: string;
   layers: SceneLayer[];
+  beats: Beat[];
+  activeBeatId?: string | null;
 };
 
 export type Trace = {
@@ -103,7 +118,9 @@ export function roomOf(project: DeskProject, asset: Asset | undefined): Trace[] 
 
 export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
-    return `${asset.name}: arrastra sobre el fondo. Mover cuesta 0.`;
+    const n = asset.scene?.beats.length ?? 0;
+    if (n === 0) return `${asset.name}. Una frase de acción se parte en poses. No se pinta el capítulo.`;
+    return `${asset.name}. ${n} poses. Clic en una o fíjala. Reusa láminas.`;
   }
   const miss = missingViews(asset);
   if (miss.length === 0) {
