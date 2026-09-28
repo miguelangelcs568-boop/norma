@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
-import { Button } from "@/components/desk/controls";
+import { ArrowUp } from "lucide-react";
 import { isShortOrder, runCall, runInterpreted } from "@/components/desk/engine";
 import { useResolvedSrc } from "@/components/desk/media";
 import { directorPacket, interpret } from "@/lib/desk/brief";
@@ -9,51 +8,31 @@ import { shrinkSrc } from "@/lib/desk/images";
 import type { DeskKeys } from "@/lib/desk/keys";
 import { pushGeneral } from "@/lib/desk/log";
 import { activeSrc, selectedAsset, useDesk } from "@/lib/desk/store";
-import { briefFor, roomOf } from "@/lib/desk/types";
+import { roomOf } from "@/lib/desk/types";
 
-const PRESS: Record<string, string> = {
-  reusar: "Reusa",
-  derivar: "Deriva",
-  pintar: "Pinta maestro",
-  componer: "Compone",
-  ficha: "Ficha",
-  nada: "Espera",
-};
-
-export function Director({
-  keys,
-  scope = "asset",
-  assetId,
-}: {
-  keys: DeskKeys;
-  scope?: "general" | "asset";
-  assetId?: string;
-}) {
+export function Director({ keys, hub = false, assetId }: { keys: DeskKeys; hub?: boolean; assetId?: string }) {
   const project = useDesk((s) => s.project);
-  const lastBrief = useDesk((s) => s.lastBrief);
   const pushTrace = useDesk((s) => s.pushTrace);
   const setLastBrief = useDesk((s) => s.setLastBrief);
   const select = useDesk((s) => s.select);
+  const [roomId, setRoomId] = useState(assetId ?? "general");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const rooms = [{ id: "general", name: "Corto" }, ...project.assets.map((item) => ({ id: item.id, name: item.name.split(" ")[0] ?? item.name }))];
+  const current = hub ? roomId : (assetId ?? "general");
+  const scope = current === "general" ? "general" : "asset";
   const asset =
     scope === "general"
       ? selectedAsset(project)
-      : project.assets.find((item) => item.id === assetId) ?? selectedAsset(project);
-  const room = scope === "general" ? (project.trace ?? []) : roomOf(project, asset);
+      : project.assets.find((item) => item.id === current) ?? selectedAsset(project);
+  const thread = scope === "general" ? (project.trace ?? []) : roomOf(project, asset);
   const url = useResolvedSrc(activeSrc(asset));
-  const context =
-    scope === "general"
-      ? "Hablas al corto. Los cajones trabajan. El visor muestra el plano."
-      : asset
-        ? briefFor(asset)
-        : "Abre un activo.";
-  const live = text.trim() ? interpret(text, asset, project) : lastBrief;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [room.length, asset?.id, scope]);
+  }, [thread.length, current]);
 
   async function send() {
     const said = text.trim();
@@ -72,41 +51,30 @@ export function Director({
       const localFirst =
         !keys.deepseek ||
         isShortOrder(said) ||
-        cooked.intent === "nuevo_personaje" ||
-        cooked.intent === "nuevo_fondo" ||
-        cooked.intent === "vista" ||
-        cooked.intent === "fondo" ||
-        cooked.intent === "escena" ||
-        cooked.intent === "partitura" ||
-        cooked.intent === "nuevo_plano" ||
-        cooked.intent === "paleta" ||
-        cooked.intent === "ficha";
+        ["nuevo_personaje", "nuevo_fondo", "vista", "fondo", "escena", "partitura", "nuevo_plano", "paleta", "ficha"].includes(cooked.intent);
       if (localFirst) {
         await runInterpreted(said, target, keys);
         if (scope === "general") pushGeneral({ role: "director", text: cooked.spoken });
         return;
       }
       const imageDataUrl = url ? await shrinkSrc(url, 640) : undefined;
-      const history = room
+      const history = thread
         .filter((item) => item.role === "user" || item.role === "director")
         .slice(-8)
         .map((item) => ({ role: item.role === "director" ? ("assistant" as const) : ("user" as const), content: item.text }));
       const result = await dirigir({
-        data: {
-          apiKey: keys.deepseek,
-          brief: directorPacket(cooked, target, project),
-          history,
-          imageDataUrl,
-        },
+        data: { apiKey: keys.deepseek, brief: directorPacket(cooked, target, project), history, imageDataUrl },
       });
       if (!result.ok) {
-        if (scope === "general") pushGeneral({ role: "director", text: result.error });
-        else pushTrace({ role: "director", text: result.error });
+        const line = { role: "director" as const, text: result.error };
+        if (scope === "general") pushGeneral(line);
+        else pushTrace(line);
         return;
       }
       if (result.text) {
-        if (scope === "general") pushGeneral({ role: "director", text: result.text });
-        else pushTrace({ role: "director", text: result.text });
+        const line = { role: "director" as const, text: result.text };
+        if (scope === "general") pushGeneral(line);
+        else pushTrace(line);
       }
       for (const call of result.calls) {
         await runCall(call.name, call.args, selectedAsset(useDesk.getState().project), keys);
@@ -115,60 +83,82 @@ export function Director({
         await runInterpreted(said, selectedAsset(useDesk.getState().project), keys);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "El director se cortó.";
-      if (scope === "general") pushGeneral({ role: "director", text: msg });
-      else pushTrace({ role: "director", text: msg });
+      const line = { role: "director" as const, text: err instanceof Error ? err.message : "Se cortó." };
+      if (scope === "general") pushGeneral(line);
+      else pushTrace(line);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-line bg-sheet/70">
-      <header className="shrink-0 border-b border-line px-4 py-3">
-        <p className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">
-          {scope === "general" ? "Chat del corto" : `Chat de ${asset?.name ?? "estudio"}`}
-        </p>
-        <p className="mt-1 text-[13px] leading-snug text-ink">{context}</p>
-      </header>
-      {live && (
-        <div className="shrink-0 border-b border-line px-4 py-3">
-          <p className="text-[10px] font-medium tracking-[0.14em] text-muted uppercase">{PRESS[live.press] ?? live.press}</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-ink">{live.spoken || (scope === "general" ? "Una frase al corto basta." : "Este chat es de este activo.")}</p>
+    <aside className="flex h-full min-h-0 flex-col bg-sheet">
+      {hub && (
+        <div className="flex shrink-0 gap-1 overflow-x-auto px-3 pt-3 pb-1">
+          {rooms.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setRoomId(item.id)}
+              className={`h-7 shrink-0 rounded-full px-3 text-[12px] font-medium ${item.id === current ? "bg-ink text-sheet" : "text-muted hover:text-ink"}`}
+            >
+              {item.name}
+            </button>
+          ))}
         </div>
       )}
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
-        {room.map((item) => (
-          <p
-            key={item.id}
-            className={`rounded-xl px-3 py-2 text-[13px] leading-relaxed ${
-              item.role === "user" ? "bg-fill text-ink" : item.role === "tool" ? "text-[12px] text-muted" : "bg-sheet text-ink"
-            }`}
-          >
-            {item.role === "tool" ? `${item.tool}${item.cost ? ` · ${item.cost}` : " · 0"} — ` : item.role === "user" ? "tú — " : ""}
-            {item.text}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        {thread.length === 0 && (
+          <p className="pt-8 text-center text-[13px] text-muted">
+            {scope === "general" ? "Dile al corto lo que tiene que pasar." : `Notas de ${asset?.name ?? "esto"}.`}
           </p>
-        ))}
+        )}
+        {thread.map((item) => {
+          if (item.role === "tool") {
+            return (
+              <p key={item.id} className="text-center text-[11px] text-muted">
+                {item.text}
+              </p>
+            );
+          }
+          const mine = item.role === "user";
+          return (
+            <div key={item.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+              <p
+                className={`max-w-[85%] px-3.5 py-2 text-[15px] leading-snug ${
+                  mine ? "rounded-[20px] rounded-br-md bg-ink text-sheet" : "rounded-[20px] rounded-bl-md bg-fill text-ink"
+                }`}
+              >
+                {item.text}
+              </p>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
       <form
-        className="shrink-0 border-t border-line p-3"
+        className="shrink-0 px-3 pb-3"
         onSubmit={(event) => {
           event.preventDefault();
           void send();
         }}
       >
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 rounded-full bg-fill px-2 py-1">
           <input
             value={text}
             onChange={(event) => setText(event.target.value)}
             disabled={busy}
-            placeholder={busy ? "Trabajando…" : scope === "general" ? "al corto…" : `en ${asset?.name ?? "el estudio"}…`}
-            className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-vellum px-3.5 text-[13px] text-ink outline-none focus:border-accent disabled:opacity-60"
+            placeholder={busy ? "…" : scope === "general" ? "Mensaje" : asset?.name}
+            className="h-9 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-50"
           />
-          <Button tone="ink" type="submit" disabled={busy} aria-label="Enviar">
-            <Send className="size-4" />
-          </Button>
+          <button
+            type="submit"
+            disabled={busy || !text.trim()}
+            aria-label="Enviar"
+            className="flex size-8 items-center justify-center rounded-full bg-ink text-sheet disabled:opacity-30"
+          >
+            <ArrowUp className="size-4" />
+          </button>
         </div>
       </form>
     </aside>
