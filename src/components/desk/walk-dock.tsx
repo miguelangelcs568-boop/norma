@@ -5,55 +5,65 @@ import { onWalkRequest } from "@/lib/desk/walk-bus";
 import { playWalk } from "@/lib/desk/walk";
 import { useDesk } from "@/lib/desk/store";
 
-export function WalkDock({ frameRef }: { frameRef: React.RefObject<HTMLDivElement | null> }) {
-  const project = useDesk((s) => s.project);
-  const pushTrace = useDesk((s) => s.pushTrace);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stopRef = useRef(false);
-  const [busy, setBusy] = useState(false);
+const canvasRefGlobal = { current: null as HTMLCanvasElement | null };
+const stopRef = { current: false };
+let setBusyFn: ((v: boolean) => void) | null = null;
 
-  async function andar() {
-    const canvas = canvasRef.current;
-    const frame = frameRef.current;
-    if (!canvas || !frame || busy) return;
-    stopRef.current = false;
-    setBusy(true);
-    canvas.width = 1280;
-    canvas.height = 720;
-    canvas.style.opacity = "1";
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      setBusy(false);
-      return;
-    }
-    pushTrace({ role: "tool", tool: "andar", text: "Andar 3 s. 0 láminas.", cost: 0 });
-    try {
-      await playWalk(ctx, useDesk.getState().project, {
-        seconds: 2.8,
-        stopped: () => stopRef.current,
-      });
-    } catch (err) {
-      pushTrace({ role: "director", text: err instanceof Error ? err.message : "No pudo andar." });
-    } finally {
-      setBusy(false);
-    }
+export async function runAndar() {
+  const canvas = canvasRefGlobal.current;
+  const project = useDesk.getState().project;
+  const pushTrace = useDesk.getState().pushTrace;
+  if (!canvas) {
+    pushTrace({ role: "director", text: "Abre el plano para verla andar." });
+    return;
   }
+  stopRef.current = false;
+  setBusyFn?.(true);
+  canvas.width = 1280;
+  canvas.height = 720;
+  canvas.style.opacity = "1";
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    setBusyFn?.(false);
+    return;
+  }
+  pushTrace({ role: "tool", tool: "andar", text: "Andar 3 s. Cara de la lámina, piernas articuladas. 0 láminas.", cost: 0 });
+  try {
+    await playWalk(ctx, project, { seconds: 2.8, stopped: () => stopRef.current });
+  } catch (err) {
+    pushTrace({ role: "director", text: err instanceof Error ? err.message : "No pudo andar." });
+  } finally {
+    setBusyFn?.(false);
+  }
+}
 
-  useEffect(() => onWalkRequest(() => void andar()), [project.title]);
+export function WalkCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    canvasRefGlobal.current = ref.current;
+    return () => {
+      canvasRefGlobal.current = null;
+    };
+  }, []);
+  return <canvas ref={ref} className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 0 }} />;
+}
 
+export function WalkButton() {
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setBusyFn = setBusy;
+    return onWalkRequest(() => void runAndar());
+  }, []);
   return (
-    <>
-      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: busy ? 1 : 0 }} />
-      <Button
-        tone="ink"
-        onClick={() => {
-          if (busy) stopRef.current = true;
-          else void andar();
-        }}
-      >
-        <PersonStanding className="size-3.5" />
-        {busy ? "Parar" : "Andar"}
-      </Button>
-    </>
+    <Button
+      tone="ink"
+      onClick={() => {
+        if (busy) stopRef.current = true;
+        else void runAndar();
+      }}
+    >
+      <PersonStanding className="size-3.5" />
+      {busy ? "Parar" : "Andar"}
+    </Button>
   );
 }
