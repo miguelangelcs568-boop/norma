@@ -18,9 +18,10 @@ export function beatMs(beat: { ms?: number } | undefined) {
 
 function viewFor(chunk: string): ViewName {
   if (/espalda|se va|sale/.test(chunk)) return "espalda";
-  if (/mira|agua|observa|lado|perfil|camina|entra|llega/.test(chunk)) return "perfil";
-  if (/para|detien|espera|frente/.test(chunk)) return "frente";
-  return "frente";
+  if (/camina|anda|entra|llega|aparece|corre/.test(chunk)) return "camina";
+  if (/mira|agua|observa/.test(chunk)) return "mira";
+  if (/para|detien|espera/.test(chunk)) return "para";
+  return "para";
 }
 
 function placeFor(chunk: string, index: number, total: number) {
