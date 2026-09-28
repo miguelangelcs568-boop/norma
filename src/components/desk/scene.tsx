@@ -1,8 +1,9 @@
 import { useRef, useState, type PointerEvent } from "react";
-import { Download, FlipHorizontal, Pause, Play, Plus } from "lucide-react";
+import { Download, Film, FlipHorizontal, Pause, Play, Plus } from "lucide-react";
 import { Button, Field } from "@/components/desk/controls";
 import { objectFromIdb } from "@/components/desk/engine";
 import { useCutout, useResolvedSrc } from "@/components/desk/media";
+import { exportReel } from "@/lib/desk/export-reel";
 import { exportScene, keyPaper } from "@/lib/desk/images";
 import { beatMs } from "@/lib/desk/partitura";
 import { openNextShot, playReel, playShot, shotsOf } from "@/lib/desk/reel";
@@ -51,11 +52,12 @@ export function SceneBoard({ asset }: { asset: Asset }) {
   const currentBeat = beats.find((beat) => beat.id === activeBeatId) ?? beats[0];
   const [activeId, setActiveId] = useState(layers[0]?.id ?? "");
   const [playing, setPlaying] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const active = layers.find((layer) => layer.id === activeId) ?? layers[0];
   const total = beats.reduce((sum, beat) => sum + beatMs(beat), 0);
 
   async function run(kind: "shot" | "reel") {
-    if (playing) return;
+    if (playing || exporting) return;
     stopRef.current = false;
     setPlaying(true);
     pushTrace({
@@ -69,6 +71,20 @@ export function SceneBoard({ asset }: { asset: Asset }) {
       else await playShot(asset.id, () => stopRef.current);
     } finally {
       setPlaying(false);
+    }
+  }
+
+  async function video() {
+    if (playing || exporting) return;
+    setExporting(true);
+    pushTrace({ role: "director", text: "Grabando el rollo…" });
+    try {
+      await exportReel(useDesk.getState().project);
+      pushTrace({ role: "tool", tool: "video", text: "Video en Descargas. WebM. 0 láminas.", cost: 0 });
+    } catch (err) {
+      pushTrace({ role: "director", text: err instanceof Error ? err.message : "No se pudo grabar." });
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -101,11 +117,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
             {shot.name.replace("Umbral", "").trim()}
           </button>
         ))}
-        <Button
-          onClick={() => {
-            openNextShot(asset);
-          }}
-        >
+        <Button onClick={() => openNextShot(asset)}>
           <Plus className="size-4" /> Otro plano
         </Button>
         {shots.length >= 2 && (
@@ -120,6 +132,10 @@ export function SceneBoard({ asset }: { asset: Asset }) {
             {playing ? "Parar" : "Ver rollo"}
           </Button>
         )}
+        <Button tone="ink" disabled={exporting || playing} onClick={() => void video()}>
+          <Film className="size-4" />
+          {exporting ? "Grabando…" : "Video"}
+        </Button>
       </div>
       <div className="mb-2 flex gap-2 overflow-x-auto">
         {fondos.map((item) => (
@@ -236,7 +252,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
           </Button>
         </div>
       )}
-      <p className="mt-2 text-[12px] text-muted">Otro plano copia fondo y cuerpo. Cada uno tiene su frase. Ver rollo los une.</p>
+      <p className="mt-2 text-[12px] text-muted">Video baja un WebM a Descargas. Chrome o Edge. 0 láminas.</p>
     </div>
   );
 }
