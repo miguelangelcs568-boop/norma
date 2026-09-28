@@ -24,6 +24,7 @@ export function Desk() {
   const [ready, setReady] = useState(false);
   const [drawer, setDrawer] = useState<DrawerKind | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [talkId, setTalkId] = useState("general");
   const [chatOpen, setChatOpen] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -46,7 +47,18 @@ export function Desk() {
 
   function pick(next: Asset) {
     setDrawerId(next.id);
+    setTalkId(next.id);
     if (next.kind === "escena") select(next.id);
+  }
+
+  function openDrawer(kind: DrawerKind | null) {
+    setDrawer(kind);
+    if (!kind) return;
+    const first = project.assets.find((item) => item.id === drawerId && item.kind === kind) ?? project.assets.find((item) => item.kind === kind);
+    if (first) {
+      setDrawerId(first.id);
+      setTalkId(first.id);
+    }
   }
 
   if (!ready) {
@@ -101,14 +113,14 @@ export function Desk() {
         />
       )}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Dock open={drawer} chatOpen={chatOpen} onOpen={setDrawer} onChat={() => setChatOpen((value) => !value)} />
+        <Dock open={drawer} chatOpen={chatOpen} onOpen={openDrawer} onChat={() => setChatOpen((value) => !value)} />
         {drawer && <SidePanel kind={drawer} keys={keys} pickedId={drawerId} onPick={pick} onClose={() => setDrawer(null)} />}
         <main className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${chatOpen ? "max-md:hidden" : "flex"} md:flex`}>
           {viewer ? <Stage asset={viewer} keys={keys} /> : null}
         </main>
         {chatOpen && (
           <div className="flex h-full min-h-0 w-full min-w-0 flex-col border-l border-line md:w-[var(--space-chat)] md:shrink-0">
-            <Director keys={keys} hub />
+            <Director keys={keys} hub roomId={talkId} onRoom={setTalkId} />
           </div>
         )}
       </div>
