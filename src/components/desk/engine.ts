@@ -5,12 +5,13 @@ import { generarLamina } from "@/lib/desk/image.functions";
 import { dataUrlToBlob, extractPalette, flipSrc, shrinkSrc } from "@/lib/desk/images";
 import type { DeskKeys } from "@/lib/desk/keys";
 import { planBeats } from "@/lib/desk/partitura";
+import { openNextShot } from "@/lib/desk/reel";
 import { activeSrc, emptySpec, nid, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
 export function isShortOrder(brief: string) {
   const text = brief.trim().toLowerCase();
-  return text.length < 48 || /^(fondo|perfil|frente|espalda|expres|paleta|escena|tres|ficha|entra|mira|para)\b/.test(text);
+  return text.length < 48 || /^(fondo|perfil|frente|espalda|expres|paleta|escena|tres|ficha|entra|mira|para|otro plano)\b/.test(text);
 }
 
 export async function runInterpreted(said: string, asset: Asset | undefined, keys: DeskKeys) {
@@ -51,6 +52,10 @@ async function enact(brief: Brief, asset: Asset | undefined, keys: DeskKeys) {
     const palette = await extractPalette(resolved);
     desk.patchSpec(asset.id, { palette });
     desk.pushTrace({ role: "tool", tool: "paleta", text: palette.join(" "), cost: 0 });
+    return;
+  }
+  if (brief.intent === "nuevo_plano") {
+    openNextShot(asset?.kind === "escena" ? asset : undefined);
     return;
   }
   if (brief.intent === "partitura") {
