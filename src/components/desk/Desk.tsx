@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FolderOpen, HardDrive, MessageSquare, Moon, Settings, Sun } from "lucide-react";
 import { Director } from "@/components/desk/director";
 import { Dock, SidePanel, type DrawerKind } from "@/components/desk/drawers";
@@ -125,7 +125,7 @@ function IconBtn({
   label: string;
   pressed?: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
