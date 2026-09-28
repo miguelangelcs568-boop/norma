@@ -17,9 +17,14 @@ export function Desk() {
   const [settings, setSettings] = useState(false);
   const [keys, setKeys] = useState<DeskKeys>({ deepseek: "", image: "", brush: "off" });
   const [theme, setTheme] = useState<Theme>("light");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    void useDesk.persist.rehydrate();
+    void useDesk.persist.rehydrate().then(() => {
+      const desk = useDesk.getState();
+      desk.loadProject(desk.project);
+      setReady(true);
+    });
     setKeys(loadKeys());
     const prefs = loadPrefs();
     setTheme(prefs.theme);
@@ -29,6 +34,12 @@ export function Desk() {
   function chooseTheme(next: Theme) {
     setTheme(next);
     savePrefs({ theme: next });
+  }
+
+  if (!ready) {
+    return (
+      <div className="grid h-dvh place-items-center bg-vellum text-[13px] text-muted">Abriendo el corto…</div>
+    );
   }
 
   return (
