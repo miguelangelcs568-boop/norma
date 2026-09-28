@@ -106,19 +106,19 @@ export function viewsFor(kind: AssetKind): ViewName[] {
 }
 
 export function missingViews(asset: Asset): ViewName[] {
-  const have = new Set(asset.takes.map((take) => take.view));
+  const have = new Set((asset.takes ?? []).map((take) => take.view));
   return viewsFor(asset.kind).filter((view) => !have.has(view));
 }
 
 export function roomOf(project: DeskProject, asset: Asset | undefined): Trace[] {
-  if (!asset) return project.trace;
+  if (!asset) return project.trace ?? [];
   if (asset.thread && asset.thread.length > 0) return asset.thread;
-  return project.trace;
+  return project.trace ?? [];
 }
 
 export function briefFor(asset: Asset): string {
   if (asset.kind === "escena") {
-    const n = asset.scene?.beats.length ?? 0;
+    const n = asset.scene?.beats?.length ?? 0;
     if (n === 0) return `${asset.name}. Una frase de acción se parte en poses. No se pinta el capítulo.`;
     return `${asset.name}. ${n} poses. Clic en una o fíjala. Reusa láminas.`;
   }
