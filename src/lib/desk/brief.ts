@@ -1,10 +1,11 @@
+import { isActing } from "./partitura";
 import { VIEW_LABEL, type Asset, type DeskProject, type Spec, type ViewName } from "./types";
 
 export type Press = "reusar" | "derivar" | "pintar" | "componer" | "ficha" | "nada";
 
 export type Brief = {
   said: string;
-  intent: "vista" | "fondo" | "ficha" | "escena" | "nuevo_personaje" | "nuevo_fondo" | "paleta" | "hablar";
+  intent: "vista" | "fondo" | "ficha" | "escena" | "partitura" | "nuevo_personaje" | "nuevo_fondo" | "paleta" | "hablar";
   view: ViewName | null;
   spoken: string;
   paint: string;
@@ -78,6 +79,18 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (has(text, ["paleta", "colores"])) {
     return { ...empty, intent: "paleta", spoken: "Saco la paleta de la lamina abierta. Cuesta 0.", press: "ficha" };
   }
+
+  if (isActing(text) || (asset?.kind === "escena" && !has(text, ["fondo nuevo", "otro fondo"]))) {
+    if (isActing(text) || asset?.kind === "escena") {
+      return {
+        ...empty,
+        intent: "partitura",
+        spoken: "Parto la frase en poses. Reuso las láminas que ya hay. Tú fijas. No pinto el capítulo.",
+        press: "componer",
+      };
+    }
+  }
+
   if (/\bescena\b/.test(text) || has(text, ["coloca", "mueve", "ponla", "poner en"])) {
     return { ...empty, intent: "escena", spoken: "Voy a la escena. Mover no pinta. Cuesta 0.", press: "componer" };
   }
@@ -179,7 +192,10 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   if (asset) {
     return {
       ...empty,
-      spoken: `Chat de ${asset.name}. Di frente, perfil o sube un boceto. Si es otra persona: un personaje.`,
+      spoken:
+        asset.kind === "escena"
+          ? `Chat del plano. Di una acción: Lina entra al muelle, para, mira el agua.`
+          : `Chat de ${asset.name}. Di frente, perfil o sube un boceto.`,
       paint: paintLock(asset.kind === "fondo" ? "fondo" : "frente", `${asset.name}. ${asset.spec.costume}`),
     };
   }
@@ -200,7 +216,7 @@ export function directorPacket(brief: Brief, asset: Asset | undefined, project?:
     asset?.spec.costume ? `Vestuario ley: ${asset.spec.costume}` : "",
     asset?.spec.never.length ? `Nunca: ${asset.spec.never.join("; ")}` : "",
     roster ? `Canon del corto:\n${roster}` : "",
-    "Eres varios oficios en uno: fichista, archivo, prensa. No pintes si puedes reusar o derivar. Una sola generar_lamina si falta maestro y hay pincel.",
+    "Si el pedido es acción, parte en poses y reusa. No pintes el capítulo.",
   ]
     .filter(Boolean)
     .join("\n");
