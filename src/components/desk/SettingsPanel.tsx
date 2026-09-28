@@ -19,16 +19,16 @@ export function SettingsPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[8vh] sm:pt-[12vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
       <button type="button" className="absolute inset-0 bg-ink/25 backdrop-blur-sm" aria-label="Cerrar ajustes" onClick={onClose} />
       <form
-        className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-line bg-sheet shadow-[var(--shadow-sheet)]"
+        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-line bg-sheet shadow-[var(--shadow-sheet)]"
         onSubmit={(event) => {
           event.preventDefault();
           onSave();
         }}
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3">
           <div>
             <p className="text-[11px] font-medium tracking-[0.14em] text-muted uppercase">NORMA</p>
             <h2 className="text-[18px] font-semibold tracking-tight">Ajustes</h2>
@@ -37,7 +37,7 @@ export function SettingsPanel({
             <X className="size-3.5" />
           </Button>
         </div>
-        <div className="space-y-6 px-5 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
           <section>
             <p className="mb-2 text-[12px] font-medium text-muted">Apariencia</p>
             <div className="grid grid-cols-2 gap-1 rounded-2xl bg-fill p-1">
@@ -57,27 +57,27 @@ export function SettingsPanel({
               </button>
             </div>
           </section>
-          <section className="grid gap-3">
+          <section className="grid gap-2">
             <p className="text-[12px] font-medium text-muted">Pincel</p>
             {(
               [
-                ["off", "Apagado", "Subir boceto o derivar. Calidad que controlas."],
-                ["trial", "Prueba gratis", "Rápida y fea. No la uses si ya hay cara."],
-                ["xai", "xAI", "Solo si pegaste clave. Sigue sin ser el eje."],
+                ["off", "Apagado", "Subir boceto o derivar."],
+                ["trial", "Prueba gratis", "Rápida y fea. No si ya hay cara."],
+                ["xai", "xAI", "Solo con clave. No es el eje."],
               ] as const
             ).map(([id, label, hint]) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => onChange({ ...keys, brush: id })}
-                className={`rounded-2xl border px-3 py-2.5 text-left ${keys.brush === id ? "border-ink bg-fill" : "border-line"}`}
+                className={`rounded-2xl border px-3 py-2 text-left ${keys.brush === id ? "border-ink bg-fill" : "border-line"}`}
               >
                 <span className="block text-[13px] font-medium text-ink">{label}</span>
                 <span className="block text-[12px] text-muted">{hint}</span>
               </button>
             ))}
           </section>
-          <section className="grid gap-4">
+          <section className="grid gap-3">
             <p className="text-[12px] font-medium text-muted">Claves</p>
             <label className="block text-[12px] text-muted">
               DeepSeek · director (opcional)
@@ -102,11 +102,11 @@ export function SettingsPanel({
               />
             </label>
             <p className="text-[11px] leading-relaxed text-muted">
-              DeepSeek no pinta. Sin él el chat local sigue. El corto se guarda solo en este navegador y con Guardar en el PC.
+              DeepSeek no pinta. Sin él el chat local sigue. El corto se guarda en este navegador y con Guardar.
             </p>
           </section>
         </div>
-        <div className="flex justify-end gap-2 border-t border-line px-5 py-3.5">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-line px-5 py-3">
           <Button type="button" onClick={onClose}>
             Cancelar
           </Button>
