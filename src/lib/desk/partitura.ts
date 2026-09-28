@@ -11,6 +11,11 @@ export function isActing(text: string) {
   return ACT.some((word) => t.includes(word));
 }
 
+export function beatMs(beat: { ms?: number } | undefined) {
+  const n = beat?.ms;
+  return typeof n === "number" && n >= 200 ? n : 900;
+}
+
 function viewFor(chunk: string): ViewName {
   if (/espalda|se va|sale/.test(chunk)) return "espalda";
   if (/mira|agua|observa|lado|perfil|camina|entra|llega/.test(chunk)) return "perfil";
@@ -59,6 +64,7 @@ export function planBeats(said: string, project: DeskProject): Beat[] {
   const bits = chunksOf(said);
   return bits.map((chunk, index) => {
     const place = placeFor(chunk, index, bits.length);
+    const hold = /para|espera|mira/.test(chunk) ? 1200 : 800;
     return {
       id: nid(),
       label: labelFor(chunk, index),
@@ -70,6 +76,7 @@ export function planBeats(said: string, project: DeskProject): Beat[] {
       scale: place.scale,
       flip: place.flip,
       status: "borrador" as const,
+      ms: hold,
     };
   });
 }
