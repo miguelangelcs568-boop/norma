@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FolderOpen, HardDrive, MessageSquare, Moon, Settings, Sun } from "lucide-react";
-import { Button } from "@/components/desk/controls";
 import { Director } from "@/components/desk/director";
 import { Dock, SidePanel, type DrawerKind } from "@/components/desk/drawers";
 import { SettingsPanel } from "@/components/desk/SettingsPanel";
@@ -51,20 +50,14 @@ export function Desk() {
   }
 
   if (!ready) {
-    return <div className="grid h-dvh place-items-center bg-vellum text-[13px] text-muted">Abriendo el corto…</div>;
+    return <div className="grid h-dvh place-items-center bg-vellum text-[15px] text-muted">Abriendo…</div>;
   }
-
-  const showChat = chatOpen;
-  const showPanel = drawer !== null;
 
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-vellum text-ink">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-line bg-sheet px-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-medium tracking-[0.18em] text-muted uppercase">NORMA</p>
-          <h1 className="truncate font-sans text-[17px] font-semibold leading-none tracking-tight">{project.title}</h1>
-        </div>
-        <div className="flex items-center gap-1">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-line bg-sheet/80 px-3 backdrop-blur">
+        <p className="truncate text-[15px] font-semibold tracking-tight">{project.title}</p>
+        <div className="flex items-center gap-0.5">
           <input
             ref={fileRef}
             type="file"
@@ -73,29 +66,24 @@ export function Desk() {
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (!file) return;
-              void readPackFile(file).then(loadProject);
+              if (file) void readPackFile(file).then(loadProject);
             }}
           />
-          <Button aria-label="Guardar" onClick={() => void packProject(project).then(downloadPack)}>
-            <HardDrive className="size-3.5" />
-          </Button>
-          <Button aria-label="Abrir" onClick={() => fileRef.current?.click()}>
-            <FolderOpen className="size-3.5" />
-          </Button>
-          <Button
-            tone={showChat ? "ink" : "ghost"}
-            aria-label="Chat del corto"
-            onClick={() => setChatOpen((value) => !value)}
-          >
-            <MessageSquare className="size-3.5" />
-          </Button>
-          <Button onClick={() => chooseTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Tema claro" : "Tema oscuro"}>
-            {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          </Button>
-          <Button onClick={() => setSettings(true)} aria-label="Ajustes">
-            <Settings className="size-3.5" />
-          </Button>
+          <IconBtn label="Guardar" onClick={() => void packProject(project).then(downloadPack)}>
+            <HardDrive className="size-4" strokeWidth={1.6} />
+          </IconBtn>
+          <IconBtn label="Abrir" onClick={() => fileRef.current?.click()}>
+            <FolderOpen className="size-4" strokeWidth={1.6} />
+          </IconBtn>
+          <IconBtn label="Conversación" pressed={chatOpen} onClick={() => setChatOpen((value) => !value)}>
+            <MessageSquare className="size-4" strokeWidth={1.6} />
+          </IconBtn>
+          <IconBtn label={theme === "dark" ? "Claro" : "Oscuro"} onClick={() => chooseTheme(theme === "dark" ? "light" : "dark")}>
+            {theme === "dark" ? <Sun className="size-4" strokeWidth={1.6} /> : <Moon className="size-4" strokeWidth={1.6} />}
+          </IconBtn>
+          <IconBtn label="Ajustes" onClick={() => setSettings(true)}>
+            <Settings className="size-4" strokeWidth={1.6} />
+          </IconBtn>
         </div>
       </header>
       {settings && (
@@ -113,29 +101,41 @@ export function Desk() {
         />
       )}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Dock
-          open={drawer}
-          chatOpen={showChat}
-          onOpen={setDrawer}
-          onChat={() => setChatOpen((value) => !value)}
-        />
-        {showPanel && drawer && (
-          <SidePanel kind={drawer} keys={keys} pickedId={drawerId} onPick={pick} onClose={() => setDrawer(null)} />
-        )}
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-vellum">
-          {viewer ? <Stage asset={viewer} keys={keys} /> : <p className="p-6 text-[13px] text-muted">No hay plano.</p>}
+        <Dock open={drawer} chatOpen={chatOpen} onOpen={setDrawer} onChat={() => setChatOpen((value) => !value)} />
+        {drawer && <SidePanel kind={drawer} keys={keys} pickedId={drawerId} onPick={pick} onClose={() => setDrawer(null)} />}
+        <main className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${chatOpen ? "max-md:hidden" : "flex"} md:flex`}>
+          {viewer ? <Stage asset={viewer} keys={keys} /> : null}
         </main>
-        {showChat && (
-          <div className="hidden h-full w-[var(--space-chat)] shrink-0 border-l border-line md:flex md:flex-col">
-            <Director keys={keys} scope="general" />
-          </div>
-        )}
-        {showChat && (
-          <div className="flex h-full min-w-0 flex-1 flex-col border-l border-line md:hidden">
-            <Director keys={keys} scope="general" />
+        {chatOpen && (
+          <div className="flex h-full min-h-0 w-full min-w-0 flex-col border-l border-line md:w-[var(--space-chat)] md:shrink-0">
+            <Director keys={keys} hub />
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function IconBtn({
+  label,
+  pressed,
+  onClick,
+  children,
+}: {
+  label: string;
+  pressed?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`flex size-9 items-center justify-center rounded-full ${pressed ? "bg-fill text-ink" : "text-muted hover:bg-fill hover:text-ink"}`}
+    >
+      {children}
+    </button>
   );
 }
