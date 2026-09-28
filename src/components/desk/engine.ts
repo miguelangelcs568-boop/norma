@@ -8,10 +8,21 @@ import { planBeats } from "@/lib/desk/partitura";
 import { openNextShot } from "@/lib/desk/reel";
 import { activeSrc, emptySpec, nid, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Take, type ViewName } from "@/lib/desk/types";
+import { requestWalk } from "@/lib/desk/walk-bus";
+
+/** Solo órdenes de mesa. Lo demás, si hay clave, lo habla DeepSeek. */
+export function isLocalOrder(said: string, intent: Brief["intent"]) {
+  const text = said.trim().toLowerCase();
+  if (intent === "caminar") return true;
+  if (intent === "nuevo_plano") return true;
+  if (intent === "paleta" && /^(paleta|colores)\b/.test(text)) return true;
+  if (intent === "vista" && /^(frente|perfil|espalda|expresi[oó]n|tres cuartos|3\/4)$/.test(text)) return true;
+  if (intent === "partitura" && /,| y | luego | despu[eé]s |;/.test(text)) return true;
+  return false;
+}
 
 export function isShortOrder(brief: string) {
-  const text = brief.trim().toLowerCase();
-  return text.length < 48 || /^(fondo|perfil|frente|espalda|expres|paleta|escena|tres|ficha|entra|mira|para|otro plano)\b/.test(text);
+  return isLocalOrder(brief, "hablar");
 }
 
 export async function runInterpreted(said: string, asset: Asset | undefined, keys: DeskKeys) {
@@ -28,7 +39,7 @@ function writePartitura(said: string, asset: Asset | undefined) {
   const desk = useDesk.getState();
   const scene = asset?.kind === "escena" ? asset : desk.project.assets.find((item) => item.kind === "escena");
   if (!scene) {
-    desk.pushTrace({ role: "director", text: "No hay plano. Crea uno en Archivo." });
+    desk.pushTrace({ role: "director", text: "No hay plano. Di otro plano o crea uno." });
     return;
   }
   const beats = planBeats(said, desk.project);
@@ -106,6 +117,11 @@ export async function runCall(name: string, args: CallArgs, asset: Asset | undef
   const desk = useDesk.getState();
   if (name === "partitura") {
     writePartitura(args.prompt || args.notes, asset);
+    return;
+  }
+  if (name === "andar") {
+    requestWalk();
+    desk.pushTrace({ role: "tool", tool: "andar", text: "Anda unos segundos. 0 láminas.", cost: 0 });
     return;
   }
   if (name === "crear_activo") {
