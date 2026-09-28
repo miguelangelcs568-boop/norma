@@ -3,9 +3,10 @@ import { mintPlate } from "@/components/desk/engine";
 import { useResolvedSrc } from "@/components/desk/media";
 import { SceneBoard } from "@/components/desk/scene";
 import { ToolRow } from "@/components/desk/tools";
+import { fillActing } from "@/lib/desk/body";
 import type { DeskKeys } from "@/lib/desk/keys";
 import { activeSrc, useDesk } from "@/lib/desk/store";
-import { VIEW_LABEL, missingViews, viewsFor, type Asset, type Take, type ViewName } from "@/lib/desk/types";
+import { ACTING_VIEWS, VIEW_LABEL, missingViews, viewsFor, type Asset, type Take, type ViewName } from "@/lib/desk/types";
 
 export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
   const url = useResolvedSrc(activeSrc(asset));
@@ -18,6 +19,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
   const [guide, setGuide] = useState(false);
   const slots = viewsFor(asset.kind);
   const miss = missingViews(asset);
+  const needBody = asset.kind === "personaje" && ACTING_VIEWS.some((view) => !asset.takes.some((take) => take.view === view));
 
   async function run(view: ViewName) {
     setError(null);
@@ -42,18 +44,24 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
+      <div className="flex h-10 shrink-0 items-center gap-2 px-3">
         <input
           value={asset.name}
           onChange={(event) => rename(asset.id, event.target.value)}
           className="h-8 min-w-0 flex-1 bg-transparent text-[14px] font-medium tracking-tight text-ink outline-none"
         />
+        {needBody && (
+          <button type="button" className="h-7 rounded-full bg-ink px-3 text-[12px] font-medium text-sheet" onClick={() => fillActing(asset)}>
+            Cuerpo
+          </button>
+        )}
       </div>
       {slots.length > 0 && (
-        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-line px-2 py-1.5">
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-2 py-2">
           {slots.map((view) => {
             const take = asset.takes.find((item) => item.view === view);
             const on = take && take.id === asset.activeTakeId;
+            const body = ACTING_VIEWS.includes(view);
             return (
               <button
                 key={view}
@@ -63,7 +71,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
                   if (take) setActiveTake(asset.id, take.id);
                   else void run(view);
                 }}
-                className={`h-14 w-16 shrink-0 overflow-hidden rounded-lg border text-left ${on ? "border-ink" : "border-line"} ${take ? "bg-sheet" : "border-dashed bg-fill/40"}`}
+                className={`h-16 w-[4.4rem] shrink-0 overflow-hidden rounded-xl text-left ${on ? "bg-ink text-sheet" : body ? "bg-fill" : "bg-vellum"} ${take ? "" : "outline-dashed outline-1 outline-line"}`}
               >
                 {take ? (
                   <SlotThumb take={take} />
@@ -79,14 +87,11 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="grid place-items-center bg-vellum p-4">
+        <div className="grid place-items-center p-4">
           {board === "hoja" && asset.kind === "personaje" ? (
             <ModelSheet asset={asset} />
           ) : url ? (
-            <div className="relative inline-block">
-              <img src={url} alt={asset.name} className="max-h-48 w-auto object-contain" />
-              {guide && asset.kind === "personaje" && <HeadGuide />}
-            </div>
+            <img src={url} alt={asset.name} className="max-h-48 w-auto object-contain" />
           ) : (
             <p className="max-w-xs text-center text-[12px] text-muted">
               {miss.length > 0 ? `Sube un boceto o pide ${VIEW_LABEL[miss[0]]}.` : "Sube un boceto."}
@@ -106,7 +111,7 @@ export function Stage({ asset, keys }: { asset: Asset; keys: DeskKeys }) {
         onArm={setArmed}
         onRun={(view) => void run(view)}
       />
-      {error && <p className="shrink-0 px-3 py-1 text-[12px] text-accent">{error}</p>}
+      {error && <p className="shrink-0 px-3 py-1 text-[12px] text-muted">{error}</p>}
     </div>
   );
 }
@@ -116,18 +121,8 @@ function SlotThumb({ take }: { take: Take }) {
   return (
     <span className="relative block h-full w-full">
       {url ? <img src={url} alt={take.label} className="h-full w-full object-cover" /> : null}
-      <span className="absolute inset-x-0 bottom-0 bg-sheet/80 px-1 text-[9px] text-muted">{take.label}</span>
+      <span className="absolute inset-x-0 bottom-0 bg-sheet/80 px-1 text-[9px] text-ink">{take.label}</span>
     </span>
-  );
-}
-
-function HeadGuide() {
-  return (
-    <div className="pointer-events-none absolute inset-0">
-      {Array.from({ length: 9 }, (_, i) => (
-        <div key={i} className="absolute right-0 left-0 border-t border-accent" style={{ top: `${(i / 8) * 100}%` }} />
-      ))}
-    </div>
   );
 }
 
@@ -158,19 +153,11 @@ function Ficha({ asset }: { asset: Asset }) {
     <div className="grid gap-2 border-t border-line p-3">
       <label className="text-[11px] text-muted">
         Oficio
-        <textarea
-          value={spec.role}
-          onChange={(event) => patchSpec(asset.id, { role: event.target.value.slice(0, 240) })}
-          className="mt-1 h-16 w-full rounded-lg border border-line bg-sheet p-2 text-[12px] text-ink outline-none"
-        />
+        <textarea value={spec.role} onChange={(event) => patchSpec(asset.id, { role: event.target.value.slice(0, 240) })} className="mt-1 h-16 w-full rounded-lg bg-fill p-2 text-[12px] text-ink outline-none" />
       </label>
       <label className="text-[11px] text-muted">
         Vestuario
-        <textarea
-          value={spec.costume}
-          onChange={(event) => patchSpec(asset.id, { costume: event.target.value.slice(0, 320) })}
-          className="mt-1 h-16 w-full rounded-lg border border-line bg-sheet p-2 text-[12px] text-ink outline-none"
-        />
+        <textarea value={spec.costume} onChange={(event) => patchSpec(asset.id, { costume: event.target.value.slice(0, 320) })} className="mt-1 h-16 w-full rounded-lg bg-fill p-2 text-[12px] text-ink outline-none" />
       </label>
     </div>
   );
