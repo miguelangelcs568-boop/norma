@@ -8,7 +8,7 @@ import { Stage } from "@/components/desk/stage";
 import { loadKeys, saveKeys, type DeskKeys } from "@/lib/desk/keys";
 import { downloadPack, packProject, readPackFile } from "@/lib/desk/pack";
 import { applyTheme, loadPrefs, savePrefs, type Theme } from "@/lib/desk/prefs";
-import { selectedAsset, useDesk } from "@/lib/desk/store";
+import { useDesk } from "@/lib/desk/store";
 import type { Asset } from "@/lib/desk/types";
 
 export function Desk() {
@@ -16,7 +16,10 @@ export function Desk() {
   const lastBrief = useDesk((s) => s.lastBrief);
   const select = useDesk((s) => s.select);
   const loadProject = useDesk((s) => s.loadProject);
-  const asset = selectedAsset(project);
+  const viewer =
+    project.assets.find((item) => item.kind === "escena" && item.id === project.selectedId) ??
+    project.assets.find((item) => item.kind === "escena") ??
+    project.assets[0];
   const [settings, setSettings] = useState(false);
   const [keys, setKeys] = useState<DeskKeys>({ deepseek: "", image: "", brush: "off" });
   const [theme, setTheme] = useState<Theme>("light");
@@ -111,7 +114,7 @@ export function Desk() {
       )}
       <div className="grid min-h-0 flex-1 overflow-hidden md:grid-cols-[minmax(0,1fr)_22rem]">
         <main className="flex h-full min-h-0 flex-col overflow-hidden">
-          {asset ? <Stage asset={asset} keys={keys} /> : <p className="p-6 text-[13px] text-muted">Abre un plano.</p>}
+          {viewer ? <Stage asset={viewer} keys={keys} /> : <p className="p-6 text-[13px] text-muted">Abre Planos abajo.</p>}
         </main>
         <div className="hidden h-full min-h-0 border-l border-line md:flex md:flex-col">
           <Director keys={keys} scope="general" />
