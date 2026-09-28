@@ -1,32 +1,40 @@
 @import "tailwindcss";
 
 @theme {
-  --color-vellum: #f3ece3;
-  --color-sheet: #fbf7f1;
-  --color-ink: #1c1915;
-  --color-muted: #6b6258;
-  --color-line: #d9cfc3;
-  --color-fill: #eadfd2;
-  --color-accent: #a33b24;
-  --color-on-accent: #fff7f0;
+  --color-vellum: #ebe4da;
+  --color-sheet: #f7f1e8;
+  --color-ink: #16130f;
+  --color-muted: #6f675d;
+  --color-line: #d4cbbf;
+  --color-fill: #e7dcd0;
+  --color-accent: #9c3a24;
+  --color-on-accent: #fff6ee;
+  --color-well: #0c0b0a;
+  --color-well-text: #efe8de;
   --font-sans: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", Georgia, serif;
   --font-mono: "SF Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --radius-sm: 0.4rem;
-  --radius-md: 0.6rem;
-  --radius-lg: 0.85rem;
-  --shadow-sheet: 0 1px 2px rgb(28 25 21 / 0.04), 0 10px 28px rgb(28 25 21 / 0.06);
+  --radius-sm: 0.35rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-sheet: 0 1px 1px rgb(22 19 15 / 0.04), 0 8px 24px rgb(22 19 15 / 0.06);
+  --space-dock: 3rem;
+  --space-panel: 17.5rem;
+  --space-chat: 21rem;
+  --space-strip: 5.5rem;
 }
 
 @layer base {
   html[data-theme="dark"] {
-    --color-vellum: #14110e;
-    --color-sheet: #1c1915;
-    --color-ink: #f3ece3;
-    --color-muted: #9a9084;
+    --color-vellum: #12100d;
+    --color-sheet: #1a1714;
+    --color-ink: #f0e9df;
+    --color-muted: #9a9186;
     --color-line: #3a332c;
     --color-fill: #2a241e;
     --color-accent: #d46a4e;
     --color-on-accent: #1c1915;
+    --color-well: #070605;
+    --color-well-text: #efe8de;
     --shadow-sheet: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.45);
   }
 
@@ -45,6 +53,8 @@
     background: var(--color-vellum);
     color: var(--color-ink);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
   }
 
   h1,
@@ -53,10 +63,6 @@
     font-family: var(--font-sans);
     text-wrap: balance;
     letter-spacing: -0.03em;
-  }
-
-  p {
-    text-wrap: pretty;
   }
 
   button:not(:disabled),
