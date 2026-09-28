@@ -2,15 +2,7 @@
 
 ## Ahora (2026-09-27 noche)
 
-- Cada personaje, lugar y plano tiene su chat. Cambias de activo y ves su conversación y sus láminas.
-- Todo eso se guarda en el navegador. Guardar en el PC baja fichas + chats + láminas.
-- Pincel por defecto: apagado. Se sube boceto o se deriva. Prueba gratis y xAI son opcionales.
-- DeepSeek no es obligatorio. Si está, usa herramientas: ficha, crear_activo, fijar, paleta, componer, generar_lamina.
-- No vamos a entrenar un modelo de imagen propio. El producto es el estudio (memoria + prensa + chats), no otra caja de prompts.
-
-## Cómo probar
-
-1. `vivo.bat` → F5.
-2. Abre Lina: chat de Lina. Abre Estero: otro chat.
-3. `quiero un personaje alto con traje` crea ficha + chat nuevo.
-4. Archivo → Guardar en el PC.
+- Partitura en el plano: una frase de acción se parte en poses. Reusa frente/perfil y el fondo. Tú fijas. 0 láminas.
+- Ensayo: abre PL 010 y escribe `Lina entra al muelle, para, mira el agua`.
+- Chat por activo. Guardar en el PC. Pincel apagado por defecto.
+- No hay interpolación todavía. Eso viene cuando las poses se fijen.

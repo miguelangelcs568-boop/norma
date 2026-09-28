@@ -54,6 +54,7 @@ export function Director({ keys }: { keys: DeskKeys }) {
         cooked.intent === "vista" ||
         cooked.intent === "fondo" ||
         cooked.intent === "escena" ||
+        cooked.intent === "partitura" ||
         cooked.intent === "paleta" ||
         cooked.intent === "ficha";
       if (localFirst) {
@@ -92,13 +93,13 @@ export function Director({ keys }: { keys: DeskKeys }) {
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-line bg-sheet/70 md:border-l">
-      <header className="border-b border-line px-4 py-3">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-line bg-sheet/70 md:border-l">
+      <header className="shrink-0 border-b border-line px-4 py-3">
         <p className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">Chat de {asset?.name ?? "estudio"}</p>
         <p className="mt-1 text-[13px] leading-snug text-ink">{context}</p>
       </header>
       {live && (
-        <div className="border-b border-line px-4 py-3">
+        <div className="shrink-0 border-b border-line px-4 py-3">
           <p className="text-[10px] font-medium tracking-[0.14em] text-muted uppercase">{PRESS[live.press] ?? live.press}</p>
           <p className="mt-1 text-[12px] leading-relaxed text-ink">{live.spoken || "Escribe abajo. Este chat es de este activo."}</p>
         </div>
@@ -118,7 +119,7 @@ export function Director({ keys }: { keys: DeskKeys }) {
         <div ref={bottomRef} />
       </div>
       <form
-        className="border-t border-line p-3"
+        className="shrink-0 border-t border-line p-3"
         onSubmit={(event) => {
           event.preventDefault();
           void send();
@@ -129,7 +130,7 @@ export function Director({ keys }: { keys: DeskKeys }) {
             value={text}
             onChange={(event) => setText(event.target.value)}
             disabled={busy}
-            placeholder={busy ? "Trabajando…" : `en ${asset?.name ?? "el estudio"}…`}
+            placeholder={busy ? "Trabajando…" : asset?.kind === "escena" ? "Lina entra al muelle, para, mira el agua" : `en ${asset?.name ?? "el estudio"}…`}
             className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-vellum px-3.5 text-[13px] text-ink outline-none focus:border-accent disabled:opacity-60"
           />
           <Button tone="ink" type="submit" disabled={busy} aria-label="Enviar">
