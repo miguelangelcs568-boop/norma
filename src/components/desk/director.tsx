@@ -7,6 +7,7 @@ import { directorPacket, interpret } from "@/lib/desk/brief";
 import { dirigir } from "@/lib/desk/deepseek.functions";
 import { shrinkSrc } from "@/lib/desk/images";
 import type { DeskKeys } from "@/lib/desk/keys";
+import { pushGeneral } from "@/lib/desk/log";
 import { activeSrc, selectedAsset, useDesk } from "@/lib/desk/store";
 import { briefFor, roomOf } from "@/lib/desk/types";
 
@@ -19,23 +20,40 @@ const PRESS: Record<string, string> = {
   nada: "Espera",
 };
 
-export function Director({ keys }: { keys: DeskKeys }) {
+export function Director({
+  keys,
+  scope = "asset",
+  assetId,
+}: {
+  keys: DeskKeys;
+  scope?: "general" | "asset";
+  assetId?: string;
+}) {
   const project = useDesk((s) => s.project);
   const lastBrief = useDesk((s) => s.lastBrief);
   const pushTrace = useDesk((s) => s.pushTrace);
   const setLastBrief = useDesk((s) => s.setLastBrief);
+  const select = useDesk((s) => s.select);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const asset = selectedAsset(project);
-  const room = roomOf(project, asset);
+  const asset =
+    scope === "general"
+      ? selectedAsset(project)
+      : project.assets.find((item) => item.id === assetId) ?? selectedAsset(project);
+  const room = scope === "general" ? (project.trace ?? []) : roomOf(project, asset);
   const url = useResolvedSrc(activeSrc(asset));
-  const context = asset ? briefFor(asset) : "Abre un personaje, un fondo o una escena.";
+  const context =
+    scope === "general"
+      ? "Hablas al corto. Los cajones trabajan. El visor muestra el plano."
+      : asset
+        ? briefFor(asset)
+        : "Abre un activo.";
   const live = text.trim() ? interpret(text, asset, project) : lastBrief;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [room.length, asset?.id]);
+  }, [room.length, asset?.id, scope]);
 
   async function send() {
     const said = text.trim();
@@ -44,8 +62,13 @@ export function Director({ keys }: { keys: DeskKeys }) {
     setBusy(true);
     const cooked = interpret(said, asset, project);
     setLastBrief(cooked);
-    pushTrace({ role: "user", text: said });
+    if (scope === "general") pushGeneral({ role: "user", text: said });
+    else {
+      if (asset) select(asset.id);
+      pushTrace({ role: "user", text: said });
+    }
     try {
+      const target = scope === "asset" && asset ? asset : selectedAsset(useDesk.getState().project);
       const localFirst =
         !keys.deepseek ||
         isShortOrder(said) ||
@@ -55,10 +78,12 @@ export function Director({ keys }: { keys: DeskKeys }) {
         cooked.intent === "fondo" ||
         cooked.intent === "escena" ||
         cooked.intent === "partitura" ||
+        cooked.intent === "nuevo_plano" ||
         cooked.intent === "paleta" ||
         cooked.intent === "ficha";
       if (localFirst) {
-        await runInterpreted(said, asset, keys);
+        await runInterpreted(said, target, keys);
+        if (scope === "general") pushGeneral({ role: "director", text: cooked.spoken });
         return;
       }
       const imageDataUrl = url ? await shrinkSrc(url, 640) : undefined;
@@ -69,16 +94,20 @@ export function Director({ keys }: { keys: DeskKeys }) {
       const result = await dirigir({
         data: {
           apiKey: keys.deepseek,
-          brief: directorPacket(cooked, asset, project),
+          brief: directorPacket(cooked, target, project),
           history,
           imageDataUrl,
         },
       });
       if (!result.ok) {
-        pushTrace({ role: "director", text: result.error });
+        if (scope === "general") pushGeneral({ role: "director", text: result.error });
+        else pushTrace({ role: "director", text: result.error });
         return;
       }
-      if (result.text) pushTrace({ role: "director", text: result.text });
+      if (result.text) {
+        if (scope === "general") pushGeneral({ role: "director", text: result.text });
+        else pushTrace({ role: "director", text: result.text });
+      }
       for (const call of result.calls) {
         await runCall(call.name, call.args, selectedAsset(useDesk.getState().project), keys);
       }
@@ -86,22 +115,26 @@ export function Director({ keys }: { keys: DeskKeys }) {
         await runInterpreted(said, selectedAsset(useDesk.getState().project), keys);
       }
     } catch (err) {
-      pushTrace({ role: "director", text: err instanceof Error ? err.message : "El director se cortó." });
+      const msg = err instanceof Error ? err.message : "El director se cortó.";
+      if (scope === "general") pushGeneral({ role: "director", text: msg });
+      else pushTrace({ role: "director", text: msg });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-line bg-sheet/70 md:border-l">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-line bg-sheet/70">
       <header className="shrink-0 border-b border-line px-4 py-3">
-        <p className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">Chat de {asset?.name ?? "estudio"}</p>
+        <p className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">
+          {scope === "general" ? "Chat del corto" : `Chat de ${asset?.name ?? "estudio"}`}
+        </p>
         <p className="mt-1 text-[13px] leading-snug text-ink">{context}</p>
       </header>
       {live && (
         <div className="shrink-0 border-b border-line px-4 py-3">
           <p className="text-[10px] font-medium tracking-[0.14em] text-muted uppercase">{PRESS[live.press] ?? live.press}</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-ink">{live.spoken || "Escribe abajo. Este chat es de este activo."}</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-ink">{live.spoken || (scope === "general" ? "Una frase al corto basta." : "Este chat es de este activo.")}</p>
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
@@ -130,7 +163,7 @@ export function Director({ keys }: { keys: DeskKeys }) {
             value={text}
             onChange={(event) => setText(event.target.value)}
             disabled={busy}
-            placeholder={busy ? "Trabajando…" : asset?.kind === "escena" ? "Lina entra al muelle, para, mira el agua" : `en ${asset?.name ?? "el estudio"}…`}
+            placeholder={busy ? "Trabajando…" : scope === "general" ? "al corto…" : `en ${asset?.name ?? "el estudio"}…`}
             className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-vellum px-3.5 text-[13px] text-ink outline-none focus:border-accent disabled:opacity-60"
           />
           <Button tone="ink" type="submit" disabled={busy} aria-label="Enviar">
