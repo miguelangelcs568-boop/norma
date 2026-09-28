@@ -1,33 +1,40 @@
-import { Clapperboard, Map, UserRound, X } from "lucide-react";
+import { Clapperboard, Map, MessageSquare, UserRound, X } from "lucide-react";
 import { Director } from "@/components/desk/director";
+import { Stage } from "@/components/desk/stage";
 import type { DeskKeys } from "@/lib/desk/keys";
 import { useDesk } from "@/lib/desk/store";
-import type { Asset, AssetKind } from "@/lib/desk/types";
+import type { Asset } from "@/lib/desk/types";
 
-export type DrawerKind = "personaje" | "fondo" | "escena";
+export type DrawerKind = "personaje" | "fondo" | "escena" | "chat";
 
 const LABEL: Record<DrawerKind, string> = {
   personaje: "Personajes",
   fondo: "Lugares",
   escena: "Planos",
+  chat: "Chat",
 };
 
 const ICON = {
   personaje: UserRound,
   fondo: Map,
   escena: Clapperboard,
+  chat: MessageSquare,
 };
 
-export function DrawerBar({
+export function Dock({
   open,
+  chatOpen,
   onOpen,
+  onChat,
 }: {
   open: DrawerKind | null;
+  chatOpen: boolean;
   onOpen: (kind: DrawerKind | null) => void;
+  onChat: () => void;
 }) {
   const kinds: DrawerKind[] = ["personaje", "fondo", "escena"];
   return (
-    <div className="flex shrink-0 gap-1 overflow-x-auto border-t border-line bg-sheet px-2 py-2">
+    <nav className="flex h-full w-12 shrink-0 flex-col items-center gap-1 border-r border-line bg-sheet py-2">
       {kinds.map((kind) => {
         const Icon = ICON[kind];
         const on = open === kind;
@@ -35,19 +42,33 @@ export function DrawerBar({
           <button
             key={kind}
             type="button"
+            title={LABEL[kind]}
+            aria-label={LABEL[kind]}
+            aria-pressed={on}
             onClick={() => onOpen(on ? null : kind)}
-            className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium ${on ? "bg-ink text-sheet" : "border border-line text-ink hover:bg-fill"}`}
+            className={`flex size-10 items-center justify-center rounded-xl ${on ? "bg-ink text-sheet" : "text-muted hover:bg-fill hover:text-ink"}`}
           >
-            <Icon className="size-3.5" />
-            {LABEL[kind]}
+            <Icon className="size-4" />
           </button>
         );
       })}
-    </div>
+      <div className="mt-auto flex flex-col items-center gap-1 md:hidden">
+        <button
+          type="button"
+          title="Chat del corto"
+          aria-label="Chat del corto"
+          aria-pressed={chatOpen}
+          onClick={onChat}
+          className={`flex size-10 items-center justify-center rounded-xl ${chatOpen ? "bg-ink text-sheet" : "text-muted hover:bg-fill hover:text-ink"}`}
+        >
+          <MessageSquare className="size-4" />
+        </button>
+      </div>
+    </nav>
   );
 }
 
-export function DrawerSheet({
+export function SidePanel({
   kind,
   keys,
   pickedId,
@@ -60,44 +81,43 @@ export function DrawerSheet({
   onPick: (asset: Asset) => void;
   onClose: () => void;
 }) {
+  if (kind === "chat") {
+    return (
+      <div className="flex h-full w-full min-w-0 flex-col border-r border-line bg-sheet md:w-[var(--space-panel)]">
+        <Director keys={keys} scope="general" />
+      </div>
+    );
+  }
   const project = useDesk((s) => s.project);
   const items = project.assets.filter((item) => item.kind === kind);
   const picked = items.find((item) => item.id === pickedId) ?? items[0];
-  const Icon = ICON[kind];
 
   return (
-    <div className="flex max-h-[min(42vh,22rem)] shrink-0 flex-col overflow-hidden border-t border-line bg-sheet">
-      <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
-        <p className="flex items-center gap-2 text-[12px] font-medium tracking-[0.12em] text-muted uppercase">
-          <Icon className="size-3.5" /> {LABEL[kind]}
-        </p>
-        <button type="button" className="rounded-lg p-1 text-muted hover:bg-fill hover:text-ink" onClick={onClose} aria-label="Cerrar">
-          <X className="size-4" />
+    <aside className="flex h-full w-[min(22rem,100%)] shrink-0 flex-col overflow-hidden border-r border-line bg-sheet md:w-[var(--space-panel)]">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line px-3">
+        <p className="text-[11px] font-medium tracking-[0.14em] text-muted uppercase">{LABEL[kind]}</p>
+        <button type="button" className="rounded-md p-1 text-muted hover:bg-fill hover:text-ink" onClick={onClose} aria-label="Cerrar cajón">
+          <X className="size-3.5" />
         </button>
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-[9rem_minmax(0,1fr)] overflow-hidden md:grid-cols-[12rem_minmax(0,1fr)]">
-        <div className="min-h-0 overflow-y-auto border-r border-line py-1">
-          {items.length === 0 && <p className="px-3 text-[12px] text-muted">Vacío.</p>}
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onPick(item)}
-              className={`mx-1 flex w-[calc(100%-0.5rem)] truncate rounded-lg px-2 py-1.5 text-left text-[13px] ${item.id === picked?.id ? "bg-fill font-medium text-ink" : "text-ink/80 hover:bg-fill/60"}`}
-            >
-              {item.name}
-            </button>
-          ))}
-        </div>
-        <div className="min-h-0 overflow-hidden">
-          {picked ? <Director keys={keys} scope="asset" assetId={picked.id} /> : <p className="p-3 text-[13px] text-muted">Nada en este cajón.</p>}
-        </div>
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-2 py-1.5">
+        {items.length === 0 && <p className="px-1 text-[12px] text-muted">Vacío.</p>}
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onPick(item)}
+            className={`h-7 max-w-[9rem] shrink-0 truncate rounded-full px-2.5 text-[12px] ${item.id === picked?.id ? "bg-ink text-sheet" : "text-ink hover:bg-fill"}`}
+          >
+            {item.name}
+          </button>
+        ))}
       </div>
-    </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {picked && kind !== "escena" ? <Stage asset={picked} keys={keys} /> : null}
+        {picked && kind === "escena" ? <Director keys={keys} scope="asset" assetId={picked.id} /> : null}
+        {!picked && <p className="p-3 text-[13px] text-muted">Nada en este cajón.</p>}
+      </div>
+    </aside>
   );
-}
-
-export function kindOf(kind: AssetKind): DrawerKind | null {
-  if (kind === "personaje" || kind === "fondo" || kind === "escena") return kind;
-  return null;
 }
