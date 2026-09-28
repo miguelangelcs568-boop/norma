@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Brief } from "./brief";
-import type { Asset, DeskProject, SceneLayer, Spec, Take, Trace, ViewName } from "./types";
+import type { Asset, Beat, DeskProject, Scene, SceneLayer, Spec, Take, Trace, ViewName } from "./types";
 
 const emptySpec = (): Spec => ({
   role: "",
@@ -17,6 +17,15 @@ function take(id: string, view: ViewName, label: string, src: string, locked = t
 
 function line(text: string): Trace {
   return { id: "t0", role: "director", text };
+}
+
+function keepScene(asset: Asset, patch: Partial<Scene>): Scene {
+  return {
+    backgroundId: patch.backgroundId !== undefined ? patch.backgroundId : asset.scene?.backgroundId,
+    layers: patch.layers ?? asset.scene?.layers ?? [],
+    beats: patch.beats ?? asset.scene?.beats ?? [],
+    activeBeatId: patch.activeBeatId !== undefined ? patch.activeBeatId : asset.scene?.activeBeatId ?? null,
+  };
 }
 
 export function seedProject(): DeskProject {
@@ -57,11 +66,11 @@ export function seedProject(): DeskProject {
     name: "PL 010 Umbral",
     spec: {
       ...emptySpec(),
-      notes: "Lina sobre el estero. Moverla cuesta 0 láminas.",
+      notes: "Lina sobre el estero. Una frase de acción se parte en poses.",
     },
     takes: [],
     activeTakeId: null,
-    thread: [line("Chat del plano. Se compone, no se pinta el capítulo.")],
+    thread: [line("Chat del plano. Di: Lina entra al muelle, para, mira el agua.")],
     scene: {
       backgroundId: "estero",
       layers: [
@@ -75,6 +84,8 @@ export function seedProject(): DeskProject {
           flip: false,
         },
       ],
+      beats: [],
+      activeBeatId: null,
     },
   };
   return {
@@ -104,6 +115,9 @@ type State = {
   placeLayer: (sceneId: string, layer: SceneLayer) => void;
   removeLayer: (sceneId: string, layerId: string) => void;
   setBackgroundId: (sceneId: string, backgroundId: string) => void;
+  setBeats: (sceneId: string, beats: Beat[]) => void;
+  stageBeat: (sceneId: string, beatId: string) => void;
+  lockBeat: (sceneId: string, beatId: string) => void;
   pushTrace: (trace: Omit<Trace, "id">) => void;
   loadProject: (project: DeskProject) => void;
   resetDemo: () => void;
@@ -118,7 +132,16 @@ function nid(): string {
 }
 
 function withThread(asset: Asset): Asset {
-  return { ...asset, thread: asset.thread ?? [] };
+  const next = { ...asset, thread: asset.thread ?? [] };
+  if (next.kind === "escena") {
+    next.scene = {
+      backgroundId: next.scene?.backgroundId,
+      layers: next.scene?.layers ?? [],
+      beats: next.scene?.beats ?? [],
+      activeBeatId: next.scene?.activeBeatId ?? null,
+    };
+  }
+  return next;
 }
 
 export const useDesk = create<State>()(
@@ -171,12 +194,9 @@ export const useDesk = create<State>()(
         set({
           project: mapAsset(get().project, assetId, (asset) => ({
             ...asset,
-            scene: {
-              backgroundId: asset.scene?.backgroundId,
-              layers: (asset.scene?.layers ?? []).map((layer) =>
-                layer.id === layerId ? { ...layer, ...patch } : layer,
-              ),
-            },
+            scene: keepScene(asset, {
+              layers: (asset.scene?.layers ?? []).map((layer) => (layer.id === layerId ? { ...layer, ...patch } : layer)),
+            }),
           })),
         }),
       placeLayer: (sceneId, layer) =>
@@ -188,24 +208,74 @@ export const useDesk = create<State>()(
               idx >= 0
                 ? layers.map((item, i) => (i === idx ? { ...item, src: layer.src, name: layer.name } : item))
                 : [...layers, layer];
-            return { ...asset, scene: { backgroundId: asset.scene?.backgroundId, layers: next } };
+            return { ...asset, scene: keepScene(asset, { layers: next }) };
           }),
         }),
       removeLayer: (sceneId, layerId) =>
         set({
           project: mapAsset(get().project, sceneId, (asset) => ({
             ...asset,
-            scene: {
-              backgroundId: asset.scene?.backgroundId,
+            scene: keepScene(asset, {
               layers: (asset.scene?.layers ?? []).filter((layer) => layer.id !== layerId),
-            },
+            }),
           })),
         }),
       setBackgroundId: (sceneId, backgroundId) =>
         set({
           project: mapAsset(get().project, sceneId, (asset) => ({
             ...asset,
-            scene: { backgroundId, layers: asset.scene?.layers ?? [] },
+            scene: keepScene(asset, { backgroundId }),
+          })),
+        }),
+      setBeats: (sceneId, beats) =>
+        set({
+          project: mapAsset(get().project, sceneId, (asset) => ({
+            ...asset,
+            scene: keepScene(asset, { beats, activeBeatId: beats[0]?.id ?? null }),
+          })),
+        }),
+      stageBeat: (sceneId, beatId) =>
+        set({
+          project: (() => {
+            const project = get().project;
+            const scene = project.assets.find((item) => item.id === sceneId);
+            const beat = scene?.scene?.beats.find((item) => item.id === beatId);
+            if (!scene || !beat) return project;
+            const person = project.assets.find((item) => item.id === beat.characterId) ?? project.assets.find((item) => item.kind === "personaje");
+            const take =
+              person?.takes.find((item) => item.view === beat.view) ??
+              person?.takes.find((item) => item.view === "frente") ??
+              person?.takes[0];
+            const layers = scene.scene?.layers ?? [];
+            const layerName = person?.name ?? layers[0]?.name;
+            const idx = layers.findIndex((item) => item.name === layerName);
+            const placed: SceneLayer = {
+              id: idx >= 0 ? layers[idx].id : `lay-${nid()}`,
+              name: layerName || "Cuerpo",
+              src: take?.src ?? layers[idx]?.src ?? "",
+              x: beat.x,
+              y: beat.y,
+              scale: beat.scale,
+              flip: beat.flip,
+            };
+            const nextLayers = idx >= 0 ? layers.map((item, i) => (i === idx ? placed : item)) : [...layers, placed];
+            let nextProject = mapAsset(project, sceneId, (asset) => ({
+              ...asset,
+              scene: keepScene(asset, { layers: nextLayers, activeBeatId: beatId }),
+            }));
+            if (person && take) {
+              nextProject = mapAsset(nextProject, person.id, (asset) => ({ ...asset, activeTakeId: take.id }));
+            }
+            return nextProject;
+          })(),
+        }),
+      lockBeat: (sceneId, beatId) =>
+        set({
+          project: mapAsset(get().project, sceneId, (asset) => ({
+            ...asset,
+            scene: keepScene(asset, {
+              beats: (asset.scene?.beats ?? []).map((beat) => (beat.id === beatId ? { ...beat, status: "fijado" } : beat)),
+            }),
           })),
         }),
       pushTrace: (trace) =>
