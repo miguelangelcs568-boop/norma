@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import { Moon, Settings, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FolderOpen, HardDrive, Moon, Settings, Sun } from "lucide-react";
 import { Button } from "@/components/desk/controls";
 import { Director } from "@/components/desk/director";
 import { DrawerBar, DrawerSheet, type DrawerKind } from "@/components/desk/drawers";
 import { SettingsPanel } from "@/components/desk/SettingsPanel";
 import { Stage } from "@/components/desk/stage";
 import { loadKeys, saveKeys, type DeskKeys } from "@/lib/desk/keys";
+import { downloadPack, packProject, readPackFile } from "@/lib/desk/pack";
 import { applyTheme, loadPrefs, savePrefs, type Theme } from "@/lib/desk/prefs";
 import { selectedAsset, useDesk } from "@/lib/desk/store";
 import type { Asset } from "@/lib/desk/types";
@@ -14,6 +15,7 @@ export function Desk() {
   const project = useDesk((s) => s.project);
   const lastBrief = useDesk((s) => s.lastBrief);
   const select = useDesk((s) => s.select);
+  const loadProject = useDesk((s) => s.loadProject);
   const asset = selectedAsset(project);
   const [settings, setSettings] = useState(false);
   const [keys, setKeys] = useState<DeskKeys>({ deepseek: "", image: "", brush: "off" });
@@ -21,6 +23,7 @@ export function Desk() {
   const [ready, setReady] = useState(false);
   const [drawer, setDrawer] = useState<DrawerKind | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void useDesk.persist.rehydrate().then(() => {
@@ -55,12 +58,35 @@ export function Desk() {
           <p className="text-[11px] font-medium tracking-[0.18em] text-muted uppercase">NORMA</p>
           <h1 className="truncate font-sans text-[20px] font-semibold leading-tight tracking-tight">{project.title}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {lastBrief && (
-            <p className="hidden max-w-[14rem] truncate rounded-full bg-fill px-3 py-1 text-[11px] text-muted sm:block">
+            <p className="hidden max-w-[10rem] truncate rounded-full bg-fill px-3 py-1 text-[11px] text-muted lg:block">
               {lastBrief.press === "pintar" ? "Pincel" : lastBrief.press === "componer" ? "Rollo" : "Mesa"}
             </p>
           )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".json,.norma.json,application/json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              void readPackFile(file).then(loadProject);
+            }}
+          />
+          <Button
+            aria-label="Guardar"
+            onClick={() => {
+              void packProject(project).then(downloadPack);
+            }}
+          >
+            <HardDrive className="size-3.5" />
+          </Button>
+          <Button aria-label="Abrir" onClick={() => fileRef.current?.click()}>
+            <FolderOpen className="size-3.5" />
+          </Button>
           <Button onClick={() => chooseTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Tema claro" : "Tema oscuro"}>
             {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
           </Button>
