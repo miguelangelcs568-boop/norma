@@ -11,6 +11,9 @@ const emptySpec = (): Spec => ({
   notes: "",
 });
 
+const LOOK_2D = "Animacion 2D, linea limpia, color plano, no 3D, no foto, no catalogo";
+const PLACE_PALMA = "Estero del Caribe colombiano, calor humedo, sal, mangle y muelle";
+
 function take(id: string, view: ViewName, label: string, src: string, locked = true): Take {
   return { id, view, label, src, locked, cost: 0 };
 }
@@ -25,6 +28,18 @@ function keepScene(asset: Asset, patch: Partial<Scene>): Scene {
     layers: patch.layers ?? asset.scene?.layers ?? [],
     beats: patch.beats ?? asset.scene?.beats ?? [],
     activeBeatId: patch.activeBeatId !== undefined ? patch.activeBeatId : asset.scene?.activeBeatId ?? null,
+  };
+}
+
+export function emptyProject(): DeskProject {
+  return {
+    title: "Sin título",
+    place: "",
+    look: LOOK_2D,
+    assets: [],
+    selectedId: "",
+    platesSpent: 0,
+    trace: [],
   };
 }
 
@@ -90,10 +105,25 @@ export function seedProject(): DeskProject {
   };
   return {
     title: "La sal de Punta Palma",
+    place: PLACE_PALMA,
+    look: LOOK_2D,
     assets: [lina, estero, escena],
     selectedId: "lina",
     platesSpent: 0,
     trace: [line("Estudio. Cada activo tiene su chat. El mundo es el mismo.")],
+  };
+}
+
+function hydrateProject(project: DeskProject): DeskProject {
+  const seeded = project.title === "La sal de Punta Palma";
+  return {
+    ...project,
+    place: project.place ?? (seeded ? PLACE_PALMA : ""),
+    look: project.look ?? LOOK_2D,
+    assets: (project.assets ?? []).map(withThread),
+    selectedId: project.selectedId ?? project.assets?.[0]?.id ?? "",
+    platesSpent: project.platesSpent ?? 0,
+    trace: project.trace ?? [],
   };
 }
 
@@ -103,6 +133,8 @@ type State = {
   lastBrief: Brief | null;
   setPane: (pane: State["pane"]) => void;
   setLastBrief: (brief: Brief | null) => void;
+  setTitle: (title: string) => void;
+  setPlace: (place: string) => void;
   select: (id: string) => void;
   patchSpec: (id: string, patch: Partial<Spec>) => void;
   setActiveTake: (assetId: string, takeId: string) => void;
@@ -120,6 +152,7 @@ type State = {
   lockBeat: (sceneId: string, beatId: string) => void;
   pushTrace: (trace: Omit<Trace, "id">) => void;
   loadProject: (project: DeskProject) => void;
+  newBlank: () => void;
   resetDemo: () => void;
 };
 
@@ -152,6 +185,8 @@ export const useDesk = create<State>()(
       lastBrief: null,
       setPane: (pane) => set({ pane }),
       setLastBrief: (lastBrief) => set({ lastBrief }),
+      setTitle: (title) => set({ project: { ...get().project, title: title.slice(0, 80) || "Sin título" } }),
+      setPlace: (place) => set({ project: { ...get().project, place: place.slice(0, 240) } }),
       select: (id) => set({ project: { ...get().project, selectedId: id }, pane: "mesa" }),
       patchSpec: (id, patch) =>
         set({
@@ -285,7 +320,7 @@ export const useDesk = create<State>()(
             const next: Trace = { ...trace, id: nid() };
             const selected = project.assets.find((item) => item.id === project.selectedId);
             if (!selected) {
-              return { ...project, trace: [...project.trace, next].slice(-40) };
+              return { ...project, trace: [...(project.trace ?? []), next].slice(-80) };
             }
             const base = selected.thread && selected.thread.length > 0 ? selected.thread : [];
             return mapAsset(project, selected.id, (asset) => ({
@@ -296,13 +331,11 @@ export const useDesk = create<State>()(
         }),
       loadProject: (project) =>
         set({
-          project: {
-            ...project,
-            assets: project.assets.map(withThread),
-          },
+          project: hydrateProject(project),
           pane: "mesa",
           lastBrief: null,
         }),
+      newBlank: () => set({ project: emptyProject(), pane: "mesa", lastBrief: null }),
       resetDemo: () => set({ project: seedProject(), pane: "mesa", lastBrief: null }),
     }),
     {

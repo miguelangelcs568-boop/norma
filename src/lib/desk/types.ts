@@ -83,6 +83,8 @@ export type Asset = {
 
 export type DeskProject = {
   title: string;
+  place: string;
+  look: string;
   assets: Asset[];
   selectedId: string;
   platesSpent: number;
