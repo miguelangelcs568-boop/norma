@@ -1,8 +1,15 @@
 # ESTADO — NORMA
 
-## Ahora (2026-09-27 noche)
+## Ahora (2026-09-28)
 
-- Partitura en el plano: una frase de acción se parte en poses. Reusa frente/perfil y el fondo. Tú fijas. 0 láminas.
-- Ensayo: abre PL 010 y escribe `Lina entra al muelle, para, mira el agua`.
-- Chat por activo. Guardar en el PC. Pincel apagado por defecto.
-- No hay interpolación todavía. Eso viene cuando las poses se fijen.
+- Proyecto nuevo: barra (hoja +) o Ajustes. Mesa vacía, sin Lina, sin estero, sin láminas. Pregunta si guardar antes.
+- Volver a Punta Palma: Ajustes. No pisa un archivo .norma.json.
+- El título se edita en la barra. El mundo (place/look) vive en el proyecto, no queda clavado al estero.
+- Chat: DeepSeek es el director solo si hay clave y la frase no es una orden corta. Casi todo lo de la captura lo responde el intérprete local (frases hechas).
+- Ensayo: `vivo.bat`. Guardar Punta Palma, Proyecto nuevo, escribir en el chat «quiero un personaje».
+
+## Qué sigue (chat más natural)
+
+- No interceptar frases con typo como si fueran botones.
+- El director debe hablar con memoria del corto, no con 8 líneas y temperature 0.2.
+- Decidir si el colega del chat sigue siendo DeepSeek o pasa a Grok.

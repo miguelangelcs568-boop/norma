@@ -10,7 +10,7 @@ NORMA no es un chat que pinta el corto de nuevo. Es un escritorio de producción
 
 1. **Archivo** — lista de activos.
 2. **Mesa** — ficha, láminas, composición.
-3. **Orden** — interpreta la frase de Miguel a brief de estudio; DeepSeek obedece ese brief.
+3. **Orden** — interpreta la frase de Miguel a brief de estudio; DeepSeek obedece ese brief cuando hay clave y la frase no es una orden corta.
 
 Se guardan semilla, escala y decisiones. Los píxeles se derivan. Una lámina ya hecha se reutiliza; no se regenera la película.
 
@@ -41,7 +41,7 @@ No borrar `public/__grok/`, `server/`, `scripts/grok-pwa-*`, `startup.sh`.
 | Orden (panel) | `src/components/desk/director.tsx` |
 | Mesa / escena / árbol | `stage.tsx`, `scene.tsx`, `tree.tsx`, `tools.tsx` |
 | Intérprete de frases | `src/lib/desk/brief.ts` |
-| Estado y semilla | `src/lib/desk/store.ts` |
+| Estado, semilla y vacío | `src/lib/desk/store.ts` (`seedProject`, `emptyProject`) |
 | Director DeepSeek + tools | `src/lib/desk/deepseek.functions.ts` |
 | Motor de lámina | `src/lib/desk/image.functions.ts` |
 | Recorte / paleta / PNG | `src/lib/desk/images.ts` |
@@ -49,20 +49,20 @@ No borrar `public/__grok/`, `server/`, `scripts/grok-pwa-*`, `startup.sh`.
 
 ## IAs del producto
 
-1. **Intérprete** — código local. Convierte «alto con traje» en ficha + brief. No llama APIs.
-2. **Director — DeepSeek `deepseek-flash`**. Obey el brief ya cerrado. Tools: `ficha`, `generar_lamina`, `componer_escena`, `paleta`.
-3. **Pincel — xAI `grok-imagine-image` o ensayo Pollinations**. Una lámina por pedido, solo si falta maestro.
-4. **Este archivo** — memoria del programador.
+Hay tres voces. No se confunden:
+
+1. **Intérprete** — código local en `brief.ts`. Convierte «alto con traje» o «que camine» en ficha + brief. No llama APIs. Hoy responde la mayoría de frases con una línea hecha.
+2. **Director — DeepSeek `deepseek-flash`**. Solo entra si hay `DEEPSEEK_API_KEY` y la frase no es orden corta. Tools: `ficha`, `crear_activo`, `fijar`, `generar_lamina`, `componer_escena`, `paleta`.
+3. **Pincel — xAI `grok-imagine-image` o ensayo**. Una lámina por pedido, solo si falta maestro.
+4. **Grok en este chat** — el que programa NORMA con Miguel. No es el globo de la derecha del escritorio.
 
 Nunca subas `.env`. Nunca regeneres Lina o el estero «sólo para probar».
 
-## Corto de muestra — La sal de Punta Palma
+## Cortos
 
-- Lina Vives: frente + perfil. Never: no cambiarle el pañuelo, no inventar joyas.
-- Estero norte: tarde, sin personajes pintados.
-- PL 010 Umbral: Lina recortada sobre el estero.
-
-Faltan: tres cuartos, espalda, expresión, más planos, más fondos, línea de tiempo.
+- Semilla: **La sal de Punta Palma** (Lina, Estero norte, PL 010).
+- Vacío: título «Sin título», cero activos, cine negro. El mundo no hereda el estero.
+- Guardar / Abrir `.norma.json` no se pisan al cambiar de corto.
 
 ## Reglas al cambiar código
 
