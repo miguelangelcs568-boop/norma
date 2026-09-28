@@ -4,6 +4,7 @@ import { Button, Field } from "@/components/desk/controls";
 import { objectFromIdb } from "@/components/desk/engine";
 import { useCutout, useResolvedSrc } from "@/components/desk/media";
 import { exportScene, keyPaper } from "@/lib/desk/images";
+import { beatMs } from "@/lib/desk/partitura";
 import { activeSrc, useDesk } from "@/lib/desk/store";
 import { VIEW_LABEL, type Asset, type Beat, type SceneLayer } from "@/lib/desk/types";
 
@@ -15,7 +16,7 @@ function tween(ms: number, tick: (t: number) => void) {
   return new Promise<void>((resolve) => {
     const start = performance.now();
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / ms);
+      const t = Math.min(1, (now - start) / Math.max(200, ms));
       tick(ease(t));
       if (t < 1) requestAnimationFrame(step);
       else resolve();
@@ -26,6 +27,26 @@ function tween(ms: number, tick: (t: number) => void) {
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function setBeatMs(sceneId: string, beatId: string, ms: number) {
+  useDesk.setState((state) => ({
+    project: {
+      ...state.project,
+      assets: state.project.assets.map((asset) => {
+        if (asset.id !== sceneId) return asset;
+        return {
+          ...asset,
+          scene: {
+            backgroundId: asset.scene?.backgroundId,
+            layers: asset.scene?.layers ?? [],
+            beats: (asset.scene?.beats ?? []).map((beat) => (beat.id === beatId ? { ...beat, ms } : beat)),
+            activeBeatId: asset.scene?.activeBeatId ?? null,
+          },
+        };
+      }),
+    },
+  }));
 }
 
 export function SceneBoard({ asset }: { asset: Asset }) {
@@ -45,27 +66,34 @@ export function SceneBoard({ asset }: { asset: Asset }) {
   const layers = asset.scene?.layers ?? [];
   const beats = asset.scene?.beats ?? [];
   const activeBeatId = asset.scene?.activeBeatId;
+  const currentBeat = beats.find((beat) => beat.id === activeBeatId) ?? beats[0];
   const [activeId, setActiveId] = useState(layers[0]?.id ?? "");
   const [playing, setPlaying] = useState(false);
   const active = layers.find((layer) => layer.id === activeId) ?? layers[0];
+  const total = beats.reduce((sum, beat) => sum + beatMs(beat), 0);
 
   async function play() {
     if (beats.length < 2 || playing) return;
     stopRef.current = false;
     setPlaying(true);
-    pushTrace({ role: "tool", tool: "ver", text: `Recorre ${beats.length} poses. El recorte se mueve. 0 láminas.`, cost: 0 });
+    pushTrace({
+      role: "tool",
+      tool: "ver",
+      text: `Recorre ${beats.length} poses en ${(total / 1000).toFixed(1)} s. 0 láminas.`,
+      cost: 0,
+    });
     try {
       for (let i = 0; i < beats.length; i++) {
         if (stopRef.current) break;
         const from = beats[i];
         const to = beats[i + 1];
         stageBeat(asset.id, from.id);
-        await wait(280);
+        await wait(beatMs(from));
         if (!to || stopRef.current) continue;
         const layerId =
           useDesk.getState().project.assets.find((item) => item.id === asset.id)?.scene?.layers[0]?.id ?? active?.id;
         if (!layerId) continue;
-        await tween(900, (t) => {
+        await tween(Math.min(900, beatMs(from)), (t) => {
           if (stopRef.current) return;
           setLayer(asset.id, layerId, {
             x: from.x + (to.x - from.x) * t,
@@ -141,8 +169,21 @@ export function SceneBoard({ asset }: { asset: Asset }) {
         {beats.length === 0 && (
           <p className="text-[12px] text-muted">En el chat del plano: Lina entra al muelle, para, mira el agua.</p>
         )}
-        {beats.length === 1 && <p className="text-[12px] text-muted">Hace falta otra pose para Ver.</p>}
       </div>
+      {currentBeat && (
+        <div className="mb-2 max-w-sm">
+          <Field
+            label={`Tiempo · ${currentBeat.label}`}
+            value={beatMs(currentBeat) / 1000}
+            min={0.3}
+            max={3}
+            step={0.1}
+            unit="s"
+            onChange={(seconds) => setBeatMs(asset.id, currentBeat.id, Math.round(seconds * 1000))}
+          />
+          <p className="text-[11px] text-muted">El plano dura {(total / 1000).toFixed(1)} s en total.</p>
+        </div>
+      )}
       <div
         ref={frameRef}
         className="relative aspect-video w-full overflow-hidden rounded-2xl bg-ink"
@@ -206,9 +247,7 @@ export function SceneBoard({ asset }: { asset: Asset }) {
           </Button>
         </div>
       )}
-      <p className="mt-2 text-[12px] text-muted">
-        Ver desliza el mismo recorte entre poses. No pinta. La raya es el suelo.
-      </p>
+      <p className="mt-2 text-[12px] text-muted">Clic en una pose, mueve el tiempo, Ver otra vez. 0 láminas.</p>
     </div>
   );
 }
@@ -233,7 +272,7 @@ function BeatChip({
           {index + 1}. {beat.label}
         </span>
         <span className="block text-[10px] text-muted">
-          {VIEW_LABEL[beat.view]} · {beat.status === "fijado" ? "fijada" : "borrador"}
+          {VIEW_LABEL[beat.view]} · {(beatMs(beat) / 1000).toFixed(1)}s
         </span>
       </button>
       {beat.status !== "fijado" && (
