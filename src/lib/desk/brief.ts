@@ -30,6 +30,11 @@ function has(text: string, words: string[]) {
   return words.some((word) => text.includes(word));
 }
 
+function isScoreLine(text: string) {
+  if (!isActing(text)) return false;
+  return /,| y | luego | despu[eé]s |;/.test(text);
+}
+
 function pickView(text: string): ViewName | null {
   if (has(text, ["expres", "cara", "sonrisa", "llanto"])) return "expresion";
   if (has(text, ["tres cuartos", "3/4"])) return "tres_cuartos";
@@ -99,15 +104,13 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
     };
   }
 
-  if (isActing(text) || (asset?.kind === "escena" && !has(text, ["fondo nuevo", "otro fondo"]))) {
-    if (isActing(text) || asset?.kind === "escena") {
-      return {
-        ...empty,
-        intent: "partitura",
-        spoken: "Parto la frase en poses. Reuso las láminas que ya hay.",
-        press: "componer",
-      };
-    }
+  if (isScoreLine(text)) {
+    return {
+      ...empty,
+      intent: "partitura",
+      spoken: "Parto la frase en poses. Reuso las láminas que ya hay.",
+      press: "componer",
+    };
   }
 
   if (/\bescena\b/.test(text) || has(text, ["coloca", "mueve", "ponla", "poner en"])) {
@@ -191,21 +194,31 @@ export function interpret(said: string, asset: Asset | undefined, project?: Desk
   }
 
   if (asset) {
-    return { ...empty, spoken: asset.kind === "escena" ? "Di una acción o que camine." : `Chat de ${asset.name}.` };
+    return { ...empty, spoken: asset.kind === "escena" ? "Di una acción o que camine." : `Sigo en ${asset.name}. Dime."` };
   }
   if (!project?.assets.length) {
     return { ...empty, spoken: "Mesa vacía. Dime el título, un personaje o un lugar. Nada se pinta hasta que lo pidas." };
   }
-  return { ...empty, spoken: "Abre un personaje o di quiero un personaje." };
+  return { ...empty, spoken: "Dime. Puedo abrir un personaje, un lugar o un plano." };
 }
 
 export function directorPacket(brief: Brief, asset: Asset | undefined, project?: DeskProject) {
   const world = worldOf(project);
+  const list = (project?.assets ?? [])
+    .slice(0, 24)
+    .map((item) => {
+      const views = item.takes.map((take) => take.view).join(",") || "sin lámina";
+      const never = item.spec.never.slice(0, 3).join("; ");
+      return `- ${item.kind} ${item.name} [${views}] ${item.spec.costume} ${never}`.slice(0, 220);
+    })
+    .join("\n");
   return [
     `Corto: ${world.title}`,
-    world.place ? `Mundo: ${world.place}` : "Mundo: aún sin ficha.",
+    world.place ? `Mundo: ${world.place}` : "Mundo: aún sin ficha. No inventes Punta Palma ni el Caribe si no están.",
+    `Look: ${world.look}`,
+    `Abierto: ${asset ? `${asset.kind} ${asset.name}` : "mesa vacía"}`,
     `Pedido: ${brief.said}`,
-    brief.spoken,
-    "Si piden caminar, articula. No pintes el capítulo.",
+    list ? `Activos:\n${list}` : "Activos: ninguno.",
+    "Habla como colega de mesa. Español natural, breve. Si no entiendes, pregunta. No inventes láminas. No pintes el capítulo.",
   ].join("\n");
 }
